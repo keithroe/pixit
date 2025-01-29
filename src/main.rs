@@ -18,6 +18,6 @@ fn main() -> eframe::Result {
     eframe::run_native(
         "pixit native",
         native_options,
-        Box::new(|cc| Ok(Box::new(pixit::TemplateApp::new(cc)))),
+        Box::new(|cc| Ok(Box::new(pixit::App::new(cc)))),
     )
 }

@@ -25,6 +25,7 @@ log = "0.4"
 # You only need serde if you want app persistence:
 serde = { version = "1", features = ["derive"] }
 env_logger = "0.11"
+egui_flex = "0.2.0"
 
 [profile.release]
 opt-level = 2 # fast and small wasm
