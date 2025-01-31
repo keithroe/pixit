@@ -1,3 +1,5 @@
+use egui_flex::Flex;
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -46,6 +48,101 @@ impl eframe::App for App {
         // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
         // For inspiration and more examples, go to https://emilk.github.io/egui
 
+        egui::CentralPanel::default().show(ctx, |ui| {
+            Flex::vertical()
+                .w_full()
+                .h_full()
+                .align_items(egui_flex::FlexAlign::Stretch)
+                .align_items_content(egui::Align2::CENTER_CENTER)
+                .wrap(false)
+                .show(ui, |flex| {
+                    flex.add_flex(
+                        egui_flex::item().grow(2.0),
+                        // We need the FlexAlignContent::Stretch to make the buttons fill the space
+                        Flex::horizontal()
+                            .w_full()
+                            .h_full()
+                            .align_items(egui_flex::FlexAlign::Stretch)
+                            .align_items_content(egui::Align2::CENTER_CENTER)
+                            .wrap(false),
+                        |flex| {
+                            flex.add_ui(
+                                egui_flex::FlexItem::default()
+                                    .grow(1.0)
+                                    .basis(0.0)
+                                    .align_self(egui_flex::FlexAlign::Stretch)
+                                    .frame(egui::Frame::group(flex.ui().style())),
+                                |ui| {
+                                    egui::Frame::none().fill(egui::Color32::RED).show(ui, |ui| {
+                                        ui.label("Label with red background");
+                                    });
+                                },
+                            );
+                            flex.add_ui(
+                                egui_flex::FlexItem::default()
+                                    .grow(1.0)
+                                    .basis(0.0)
+                                    .align_self(egui_flex::FlexAlign::Stretch)
+                                    .frame(egui::Frame::group(flex.ui().style())),
+                                |ui| {
+                                    egui::Frame::canvas(ui.style())
+                                        .fill(egui::Color32::RED)
+                                        .show(ui, |ui| {});
+                                },
+                            );
+                        },
+                    );
+
+                    flex.add_flex(
+                        egui_flex::item().grow(1.0),
+                        // We need the FlexAlignContent::Stretch to make the buttons fill the space
+                        Flex::horizontal()
+                            .w_full()
+                            .h_full()
+                            .align_items(egui_flex::FlexAlign::Stretch)
+                            .align_items_content(egui::Align2::CENTER_CENTER)
+                            .wrap(false),
+                        |flex| {
+                            flex.add_ui(
+                                egui_flex::FlexItem::default()
+                                    .grow(1.0)
+                                    .frame(egui::Frame::group(flex.ui().style())),
+                                |ui| {
+                                    ui.label("controls: ");
+                                },
+                            );
+                        },
+                    );
+
+                    /*
+                                        Flex::horizontal()
+                                            .w_full()
+                                            .align_items(egui_flex::FlexAlign::Center)
+                                            .align_items_content(egui::Align2::CENTER_CENTER)
+                                            .wrap(false)
+                                            .show(ui, |flex| {
+                                                flex.add_ui(
+                                                    egui_flex::FlexItem::default()
+                                                        .grow(1.0)
+                                                        .frame(egui::Frame::group(flex.ui().style())),
+                                                    |ui| {
+                                                        ui.label("left viewport: ");
+                                                    },
+                                                );
+                                                flex.add_ui(
+                                                    egui_flex::FlexItem::default()
+                                                        .grow(1.0)
+                                                        .frame(egui::Frame::group(flex.ui().style())),
+                                                    |ui| {
+                                                        ui.label("right viewport: ");
+                                                    },
+                                                );
+                                            });
+                    */
+                })
+        });
+
+        /*
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
 
@@ -91,19 +188,6 @@ impl eframe::App for App {
                 egui::warn_if_debug_build(ui);
             });
         });
+        */
     }
-}
-
-fn powered_by_egui_and_eframe(ui: &mut egui::Ui) {
-    ui.horizontal(|ui| {
-        ui.spacing_mut().item_spacing.x = 0.0;
-        ui.label("Powered by ");
-        ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-        ui.label(" and ");
-        ui.hyperlink_to(
-            "eframe",
-            "https://github.com/emilk/egui/tree/master/crates/eframe",
-        );
-        ui.label(".");
-    });
 }
