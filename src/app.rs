@@ -70,25 +70,35 @@ impl App {
     }
 
     fn render_left_viewport(&mut self, ui: &mut egui::Ui) {
-        egui::ScrollArea::both().auto_shrink(false).show(ui, |ui| {
-            let (rect, response) =
-                ui.allocate_exact_size(egui::Vec2::splat(300.0), egui::Sense::drag());
+        Flex::vertical().grow_items(1.0).show(ui, |flex| {
+            flex.add_ui(
+                egui_flex::FlexItem::default()
+                    .grow(1.0)
+                    .frame(egui::Frame::group(flex.ui().style())),
+                |ui| {
+                    //egui::ScrollArea::both().auto_shrink(false).show(ui, |ui| {
+                    //egui::ScrollArea::both().auto_shrink(true).show(ui, |ui| {
+                    let (rect, response) =
+                        ui.allocate_exact_size(egui::Vec2::splat(512.0), egui::Sense::drag());
 
-            self.frame_state.angle += response.drag_motion().x * 0.01;
-            ui.painter().add(egui_wgpu::Callback::new_paint_callback(
-                rect,
-                render::RenderCallback {
-                    frame_state: render::FrameState {
-                        angle: self.frame_state.angle,
-                    },
+                    self.frame_state.angle += response.drag_motion().x * 0.01;
+                    ui.painter().add(egui_wgpu::Callback::new_paint_callback(
+                        rect,
+                        render::RenderCallback {
+                            frame_state: render::FrameState {
+                                angle: self.frame_state.angle,
+                            },
+                        },
+                    ));
+                    /*
+                    egui::Frame::canvas(ui.style()).show(ui, |ui| {
+                    self.custom_painting(ui);
+                    });
+                    ui.label("Drag to rotate!");
+                    */
+                    //})
                 },
-            ));
-            /*
-            egui::Frame::canvas(ui.style()).show(ui, |ui| {
-                self.custom_painting(ui);
-            });
-            ui.label("Drag to rotate!");
-            */
+            );
         });
         /*
         Flex::vertical()
