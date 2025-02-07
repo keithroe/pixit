@@ -1,55 +1,27 @@
-use std::fmt::write;
-
 use eframe::egui_wgpu;
 use egui_flex::Flex;
 
 use crate::render;
 
-#[derive(Default)]
-pub struct Model {}
+// TODO:
+//     * use render-to-tex instead of paint callback for better separation of egui/wgpu
+//     * decide on app-restore or not
 
-/// We derive Deserialize/Serialize so we can persist app state on shutdown.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct App {
-    // Example stuff:
-    label: String,
-
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    model: Model,
-
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    fps: i32,
-    #[serde(skip)] // This how you opt-out of serialization of a field
     num_frames: i32,
-    #[serde(skip)] // This how you opt-out of serialization of a field
     cur_frame: i32,
 
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    renderer0: Option<render::Renderer>,
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    renderer1: Option<render::Renderer>,
-
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    frame_state0: render::FrameState,
-
-    #[serde(skip)] // This how you opt-out of serialization of a field
-    frame_state1: render::FrameState,
+    frame_state: render::FrameState,
+    render_state_idx: usize,
 }
 
 impl Default for App {
     fn default() -> Self {
         Self {
-            // Example stuff:
-            label: "Hello World!".to_owned(),
-            model: Model {},
-            fps: 60,
             num_frames: 30,
             cur_frame: 1,
-            frame_state0: render::FrameState::default(),
-            frame_state1: render::FrameState::default(),
-            renderer0: None,
-            renderer1: None,
+            frame_state: render::FrameState::default(),
+            render_state_idx: 0,
         }
     }
 }
@@ -58,24 +30,24 @@ impl App {
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let wgpu_render_state = cc.wgpu_render_state.as_ref().unwrap();
-
-        let mut app = App::default();
-        app.renderer0 = Some(render::Renderer::new(wgpu_render_state));
-        app.renderer1 = Some(render::Renderer::new(wgpu_render_state));
-        app
+        let render_state_idx = render::init(wgpu_render_state);
+        App {
+            render_state_idx,
+            ..Default::default()
+        }
     }
 
     fn render_left_viewport(&mut self, ui: &mut egui::Ui) {
         let (rect, response) =
             ui.allocate_exact_size(egui::Vec2::splat(512.0), egui::Sense::drag());
 
-        self.frame_state0.angle += response.drag_motion().x * 0.01;
+        self.frame_state.angle += response.drag_motion().x * 0.01;
         ui.painter().add(egui_wgpu::Callback::new_paint_callback(
             rect,
             render::RenderCallback {
-                resource_idx: 0,
+                resource_idx: self.render_state_idx,
                 frame_state: render::FrameState {
-                    angle: self.frame_state0.angle,
+                    angle: self.frame_state.angle,
                 },
             },
         ));
@@ -91,9 +63,6 @@ impl App {
 impl eframe::App for App {
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Put your widgets into a `SidePanel`, `TopBottomPanel`, `CentralPanel`, `Window` or `Area`.
-        // For inspiration and more examples, go to https://emilk.github.io/egui
-
         egui::CentralPanel::default().show(ctx, |ui| {
             Flex::vertical()
                 .w_full()
@@ -102,6 +71,7 @@ impl eframe::App for App {
                 .align_content(egui_flex::FlexAlignContent::Stretch)
                 .align_content(egui_flex::FlexAlignContent::Stretch)
                 .show(ui, |flex| {
+                    // Top pane containing rendered images
                     flex.add_ui(
                         egui_flex::FlexItem::default()
                             .grow(1.0)
@@ -130,6 +100,7 @@ impl eframe::App for App {
                                 })
                         },
                     );
+                    // Botom pane containing controls
                     flex.add_ui(
                         egui_flex::FlexItem::default()
                             .grow(1.0)
