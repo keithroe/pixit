@@ -7,6 +7,7 @@
 //------------------------------------------------------------------------------
 
 pub struct RenderCallback {
+    pub resource_idx: usize,
     pub frame_state: FrameState,
 }
 
@@ -19,8 +20,8 @@ impl egui_wgpu::CallbackTrait for RenderCallback {
         _egui_encoder: &mut wgpu::CommandEncoder,
         resources: &mut egui_wgpu::CallbackResources,
     ) -> Vec<wgpu::CommandBuffer> {
-        let state: &RenderState = resources.get().unwrap();
-        state.prepare(device, queue, self.frame_state.angle);
+        let resources: &RenderResources = resources.get().unwrap();
+        resources.resources[self.resource_idx].prepare(device, queue, self.frame_state.angle);
         Vec::new()
     }
 
@@ -30,8 +31,8 @@ impl egui_wgpu::CallbackTrait for RenderCallback {
         render_pass: &mut wgpu::RenderPass<'static>,
         resources: &egui_wgpu::CallbackResources,
     ) {
-        let resources: &RenderState = resources.get().unwrap();
-        resources.paint(render_pass);
+        let resources: &RenderResources = resources.get().unwrap();
+        resources.resources[self.resource_idx].paint(render_pass);
     }
 }
 
@@ -42,14 +43,13 @@ impl egui_wgpu::CallbackTrait for RenderCallback {
 //------------------------------------------------------------------------------
 
 /// Represents data that may vary from frame to frame
+#[derive(Copy, Clone, Default)]
 pub struct FrameState {
     pub angle: f32,
 }
 
-impl Default for FrameState {
-    fn default() -> Self {
-        Self { angle: 0.0 }
-    }
+pub struct RenderResources {
+    resources: Vec<RenderState>,
 }
 
 pub struct RenderState {
@@ -76,9 +76,7 @@ impl RenderState {
         render_pass.draw(0..3, 0..1);
     }
 }
-pub struct Renderer {
-    pub angle: f32,
-}
+pub struct Renderer {}
 
 impl Renderer {
     pub fn new(render_state: &egui_wgpu::RenderState) -> Self {
@@ -155,6 +153,27 @@ impl Renderer {
         // Because the graphics pipeline must have the same lifetime as the egui render pass,
         // instead of storing the pipeline in our `Custom3D` struct, we insert it into the
         // `paint_callback_resources` type map, which is stored alongside the render pass.
+        let callback_resources = &mut render_state.renderer.write().callback_resources;
+        match callback_resources.get_mut::<RenderResources>() {
+            Some(rs) => {
+                rs.resources.push(RenderState {
+                    pipeline,
+                    bind_group,
+                    uniform_buffer,
+                });
+            }
+            None => {
+                callback_resources.insert(RenderResources {
+                    resources: vec![RenderState {
+                        pipeline,
+                        bind_group,
+                        uniform_buffer,
+                    }],
+                });
+            }
+        }
+
+        /*
         render_state
             .renderer
             .write()
@@ -164,19 +183,9 @@ impl Renderer {
                 bind_group,
                 uniform_buffer,
             });
+        */
 
-        Self { angle: 0.0 }
-    }
-
-    fn custom_painting(&mut self, ui: &mut egui::Ui) {
-        let (rect, response) =
-            ui.allocate_exact_size(egui::Vec2::splat(300.0), egui::Sense::drag());
-
-        self.angle += response.drag_motion().x * 0.01;
-        ui.painter().add(egui_wgpu::Callback::new_paint_callback(
-            rect,
-            CustomTriangleCallback { angle: self.angle },
-        ));
+        Self {}
     }
 
     fn texture_id() -> egui::TextureId {
