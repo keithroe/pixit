@@ -1,5 +1,6 @@
 // TODO: can we pull all egui out of renderer?
 
+use crate::model;
 use eframe::{
     egui_wgpu::wgpu::util::DeviceExt,
     egui_wgpu::{self, wgpu},
@@ -72,7 +73,7 @@ impl RenderState {
 }
 
 /// Initialize render pipeline and rendering state, returns render state list index
-pub fn init(render_state: &egui_wgpu::RenderState) -> usize {
+pub fn init(render_state: &egui_wgpu::RenderState, _model: model::Model) -> usize {
     let device = &render_state.device;
 
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {

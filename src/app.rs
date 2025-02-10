@@ -1,6 +1,7 @@
 use eframe::egui_wgpu;
 use egui_flex::Flex;
 
+use crate::model;
 use crate::render;
 
 // TODO:
@@ -30,7 +31,8 @@ impl App {
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         let wgpu_render_state = cc.wgpu_render_state.as_ref().unwrap();
-        let render_state_idx = render::init(wgpu_render_state);
+        let model = model::Model::load("assets/Fox.glb");
+        let render_state_idx = render::init(wgpu_render_state, model);
         App {
             render_state_idx,
             ..Default::default()
