@@ -30,18 +30,38 @@ impl Model {
             println!("\tprim bbox: {:?} - {:?}", bbox.min, bbox.max);
             let reader = primitive.reader(|buffer| Some(&buffers[buffer.index()]));
             if let Some(p) = reader.read_positions() {
-                println!("P len: {}", p.len());
+                println!("\tP len: {}", p.len());
                 self.verts = p.map(|x| Vec3::new(x[0], x[1], x[2])).collect();
-                for i in 0..10 {
-                    println!(
-                        "\t\t{} {} {}",
-                        self.verts[i].x, self.verts[i].y, self.verts[i].z
-                    );
-                }
             }
 
             if let Some(n) = reader.read_normals() {
-                println!("N len: {}", n.len());
+                println!("\tN len: {}", n.len());
+            } else {
+                println!("\tN not found");
+            }
+            if let Some(cenum) = reader.read_colors(0) {
+                match cenum {
+                    gltf::mesh::util::ReadColors::RgbU8(i) => {
+                        println!("RgbU8 len: {}", i.len());
+                    }
+                    gltf::mesh::util::ReadColors::RgbU16(i) => {
+                        println!("RgbU16 len: {}", i.len());
+                    }
+                    gltf::mesh::util::ReadColors::RgbF32(i) => {
+                        println!("RgbF32 len: {}", i.len());
+                    }
+                    gltf::mesh::util::ReadColors::RgbaU8(i) => {
+                        println!("RgbaU8 len: {}", i.len());
+                    }
+                    gltf::mesh::util::ReadColors::RgbaU16(i) => {
+                        println!("RgbaU16 len: {}", i.len());
+                    }
+                    gltf::mesh::util::ReadColors::RgbaF32(i) => {
+                        println!("RgbaF32 len: {}", i.len());
+                    }
+                }
+            } else {
+                println!("\tC not found");
             }
 
             if let Some(ienum) = reader.read_indices() {

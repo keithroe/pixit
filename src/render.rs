@@ -7,6 +7,9 @@ use eframe::{
 };
 use std::num::NonZeroU64;
 
+///
+/// Responsible for fetching the callback resources, updating per-frame inputs, and painting
+///
 pub struct RenderCallback {
     pub resource_idx: usize,
     pub frame_state: FrameState,
@@ -37,24 +40,26 @@ impl egui_wgpu::CallbackTrait for RenderCallback {
     }
 }
 
+///
 /// Represents data that may vary from frame to frame
+///
 #[derive(Copy, Clone, Default)]
 pub struct FrameState {
     pub angle: f32,
 }
 
-pub struct RenderResources {
-    resources: Vec<RenderState>,
-}
-
-pub struct RenderState {
+///
+/// wgpu state to be saved as a callback resource.  Implements the prepare and paint callbacks
+///
+pub struct State {
     pipeline: wgpu::RenderPipeline,
     bind_group: wgpu::BindGroup,
     uniform_buffer: wgpu::Buffer,
+    vertex_buffer: wgpu::Buffer,
+    num_vertices: usize,
 }
 
-// TODO: make render-state POD.  fold render-state impl into RenderCallback?
-impl RenderState {
+impl State {
     fn prepare(&self, _device: &wgpu::Device, queue: &wgpu::Queue, angle: f32) {
         // Update our uniform buffer with the angle from the UI
         queue.write_buffer(
@@ -68,17 +73,41 @@ impl RenderState {
         // Draw our triangle!
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_bind_group(0, &self.bind_group, &[]);
-        render_pass.draw(0..3, 0..1);
+        render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+        //render_pass.draw(0..3, 0..1);
+        render_pass.draw(0..self.num_vertices as u32, 0..1);
     }
 }
 
+///
+/// List of State objects, one per viewport renderer
+///
+pub struct RenderResources {
+    resources: Vec<State>,
+}
+
+///
 /// Initialize render pipeline and rendering state, returns render state list index
-pub fn init(render_state: &egui_wgpu::RenderState, _model: model::Model) -> usize {
+///
+pub fn init(render_state: &egui_wgpu::RenderState, model: model::Model) -> usize {
     let device = &render_state.device;
 
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("custom3d"),
         source: wgpu::ShaderSource::Wgsl(include_str!("./custom3d_wgpu_shader.wgsl").into()),
+        /*
+        source: wgpu::ShaderSource::Glsl {
+            shader: include_str!("./custom3d_wgpu_shader.wgsl").into(),
+            stage: naga::ShaderStage::Fragment,
+            defines: naga::FastHashMap::default(),
+        },
+        */
+    });
+
+    let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Vertex Buffer"),
+        contents: bytemuck::cast_slice(&model.verts),
+        usage: wgpu::BufferUsages::VERTEX,
     });
 
     let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -101,13 +130,26 @@ pub fn init(render_state: &egui_wgpu::RenderState, _model: model::Model) -> usiz
         push_constant_ranges: &[],
     });
 
+    let vbuf_layout = wgpu::VertexBufferLayout {
+        array_stride: std::mem::size_of::<glam::Vec3>() as wgpu::BufferAddress, // 1.
+        step_mode: wgpu::VertexStepMode::Vertex,                                // 2.
+        attributes: &[
+            // 3.
+            wgpu::VertexAttribute {
+                offset: 0,                             // 4.
+                shader_location: 0,                    // 5.
+                format: wgpu::VertexFormat::Float32x3, // 6.
+            },
+        ],
+    };
+
     let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: Some("custom3d"),
         layout: Some(&pipeline_layout),
         vertex: wgpu::VertexState {
             module: &shader,
-            entry_point: None,
-            buffers: &[],
+            entry_point: Some("vs_main"),
+            buffers: &[vbuf_layout],
             compilation_options: wgpu::PipelineCompilationOptions::default(),
         },
         fragment: Some(wgpu::FragmentState {
@@ -143,23 +185,22 @@ pub fn init(render_state: &egui_wgpu::RenderState, _model: model::Model) -> usiz
     // Because the graphics pipeline must have the same lifetime as the egui render pass,
     // instead of storing the pipeline in our `Custom3D` struct, we insert it into the
     // `paint_callback_resources` type map, which is stored alongside the render pass.
+    let state = State {
+        pipeline,
+        bind_group,
+        uniform_buffer,
+        vertex_buffer,
+        num_vertices: model.verts.len(),
+    };
     let callback_resources = &mut render_state.renderer.write().callback_resources;
     match callback_resources.get_mut::<RenderResources>() {
         Some(rs) => {
-            rs.resources.push(RenderState {
-                pipeline,
-                bind_group,
-                uniform_buffer,
-            });
+            rs.resources.push(state);
             rs.resources.len() - 1
         }
         None => {
             callback_resources.insert(RenderResources {
-                resources: vec![RenderState {
-                    pipeline,
-                    bind_group,
-                    uniform_buffer,
-                }],
+                resources: vec![state],
             });
             0 // index in renderer state list
         }
