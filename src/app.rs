@@ -1,58 +1,57 @@
-use eframe::egui_wgpu;
 use egui_flex::Flex;
 
 use crate::model;
 use crate::render;
 
 // TODO:
-//     * use render-to-tex instead of paint callback for better separation of egui/wgpu
 //     * decide on app-restore or not
 
 pub struct App {
     num_frames: i32,
     cur_frame: i32,
 
-    frame_state: render::FrameState,
-    render_state_idx: usize,
-}
-
-impl Default for App {
-    fn default() -> Self {
-        Self {
-            num_frames: 30,
-            cur_frame: 1,
-            frame_state: render::FrameState::default(),
-            render_state_idx: 0,
-        }
-    }
+    renderer: render::Renderer,
+    render_texture: egui::load::SizedTexture,
 }
 
 impl App {
+    const VIEWPORT_WIDTH: u32 = 512;
+    const VIEWPORT_HEIGHT: u32 = 512;
+
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let wgpu_render_state = cc.wgpu_render_state.as_ref().unwrap();
         let model = model::Model::load("assets/Fox.glb");
-        let render_state_idx = render::init(wgpu_render_state, model);
+
+        let wgpu_render_state = cc.wgpu_render_state.as_ref().unwrap();
+        let renderer = render::Renderer::new(
+            App::VIEWPORT_WIDTH,
+            App::VIEWPORT_HEIGHT,
+            wgpu_render_state.device.clone(),
+            wgpu_render_state.queue.clone(),
+            &model,
+        );
+
+        let render_texture_id = wgpu_render_state.renderer.write().register_native_texture(
+            &wgpu_render_state.device,
+            renderer.get_render_texture_view(),
+            wgpu::FilterMode::Nearest,
+        );
         App {
-            render_state_idx,
-            ..Default::default()
+            num_frames: 60, // TODO: connect this value
+            cur_frame: 0,
+            renderer,
+            render_texture: egui::load::SizedTexture {
+                size: egui::Vec2::new(App::VIEWPORT_WIDTH as f32, App::VIEWPORT_HEIGHT as f32),
+                id: render_texture_id,
+            },
         }
     }
 
     fn render_left_viewport(&mut self, ui: &mut egui::Ui) {
-        let (rect, response) =
-            ui.allocate_exact_size(egui::Vec2::splat(512.0), egui::Sense::drag());
-
-        self.frame_state.angle += response.drag_motion().x * 0.01;
-        ui.painter().add(egui_wgpu::Callback::new_paint_callback(
-            rect,
-            render::RenderCallback {
-                resource_idx: self.render_state_idx,
-                frame_state: render::FrameState {
-                    angle: self.frame_state.angle,
-                },
-            },
-        ));
+        self.renderer.render();
+        let image =
+            egui::Image::from_texture(self.render_texture).max_size(egui::Vec2::new(512.0, 512.0));
+        ui.add(image);
     }
 
     fn render_right_viewport(&mut self, ui: &mut egui::Ui) {
