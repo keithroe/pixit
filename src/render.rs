@@ -1,5 +1,6 @@
 // TODO: can we pull all egui out of renderer?
 
+use crate::camera;
 use crate::model;
 
 use wgpu::util::DeviceExt; // for Device::create_buffer_init
@@ -26,6 +27,66 @@ const VERTICES: &[Vertex] = &[
     },
 ];
 
+struct CameraState {
+    camera: camera::Camera,
+    matrix: glam::Mat4,
+    matrix_buffer: wgpu::Buffer,
+    matrix_bind_group_layout: wgpu::BindGroupLayout,
+    matrix_bind_group: wgpu::BindGroup,
+}
+
+impl CameraState {
+    fn init(device: &wgpu::Device) -> Self {
+        let camera = camera::Camera {
+            eye: (0.0, 0.0, 20.0).into(),
+            look_at: (0.0, 0.0, 0.0).into(),
+            up: (0.0, 1.0, 0.0).into(),
+            fovy: std::f32::consts::PI / 4.0,
+            aspect: 1.0,
+            znear: 0.01,
+            zfar: 1000.0,
+        };
+        let matrix = camera.view_projection_matrix();
+
+        let matrix_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Camera Buffer"),
+            contents: bytemuck::cast_slice(&[matrix]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let matrix_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+                label: Some("camera_bind_group_layout"),
+            });
+
+        let matrix_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &matrix_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: matrix_buffer.as_entire_binding(),
+            }],
+            label: Some("camera_bind_group"),
+        });
+
+        Self {
+            camera,
+            matrix,
+            matrix_buffer,
+            matrix_bind_group_layout,
+            matrix_bind_group,
+        }
+    }
+}
 ///
 /// A texture to be used as a rendering target.  Hard codes texture format to
 /// be Rgba8UnormSrgb as required by egui_wgpu.  Texture dims are fixed at
@@ -75,6 +136,7 @@ pub struct Renderer {
     render_texture: RenderTexture,
     render_pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
+    camera_state: CameraState,
 }
 
 // TODO: create render_pipeline to store reusable part of render pass
@@ -118,10 +180,12 @@ impl Renderer {
             source: wgpu::ShaderSource::Wgsl(include_str!("render.wgsl").into()),
         });
 
+        let camera_state = CameraState::init(&device);
+
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[],
+                bind_group_layouts: &[&camera_state.matrix_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
@@ -179,6 +243,7 @@ impl Renderer {
             queue,
             render_pipeline,
             vertex_buffer,
+            camera_state,
         }
     }
 
@@ -212,6 +277,7 @@ impl Renderer {
                 timestamp_writes: None,
                 occlusion_query_set: None,
             });
+            render_pass.set_bind_group(0, &self.camera_state.matrix_bind_group, &[]);
             render_pass.set_pipeline(&self.render_pipeline); // 2.
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.draw(0..3, 0..1);

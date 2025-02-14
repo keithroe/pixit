@@ -49,9 +49,17 @@ impl App {
 
     fn render_left_viewport(&mut self, ui: &mut egui::Ui) {
         self.renderer.render();
-        let image =
-            egui::Image::from_texture(self.render_texture).max_size(egui::Vec2::new(512.0, 512.0));
-        ui.add(image);
+        let image = egui::Image::from_texture(self.render_texture)
+            .sense(egui::Sense::drag())
+            .max_size(egui::Vec2::new(512.0, 512.0));
+        let response = ui.add(image);
+        if response.dragged() {
+            println!(
+                "dragged {} from {:?}",
+                response.drag_motion(),
+                response.interact_pointer_pos().unwrap() - response.rect.min,
+            );
+        }
     }
 
     fn render_right_viewport(&mut self, ui: &mut egui::Ui) {
