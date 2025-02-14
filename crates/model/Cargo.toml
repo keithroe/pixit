@@ -1,0 +1,11 @@
+[package]
+name = "model"
+version = "0.1.0"
+authors = ["keith <keithroe@gmail.com>"]
+edition = "2021"
+include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]
+rust-version = "1.81"
+
+[dependencies]
+gltf = "1.4.1"
+glam = { workspace = true } 

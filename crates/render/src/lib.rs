@@ -1,7 +1,6 @@
 // TODO: can we pull all egui out of renderer?
 
-use crate::camera;
-use crate::model;
+mod camera;
 
 use wgpu::util::DeviceExt; // for Device::create_buffer_init
                            //
@@ -177,7 +176,7 @@ impl Renderer {
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("render.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(include_str!("../shader/render.wgsl").into()),
         });
 
         let camera_state = CameraState::init(&device);

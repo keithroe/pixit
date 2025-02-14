@@ -1,8 +1,5 @@
 use egui_flex::Flex;
 
-use crate::model;
-use crate::render;
-
 // TODO:
 //     * decide on app-restore or not
 
@@ -63,7 +60,7 @@ impl App {
     }
 
     fn render_right_viewport(&mut self, ui: &mut egui::Ui) {
-        let image = egui::Image::new(egui::include_image!("../assets/monkey_pixel.png"))
+        let image = egui::Image::new(egui::include_image!("../../../assets/monkey_pixel.png"))
             .max_size(egui::Vec2::new(512.0, 512.0));
         ui.add(image);
     }

@@ -1,30 +1,15 @@
 [package]
-name = "pixit"
+name = "pixit-app"
 version = "0.1.0"
 authors = ["keith <keithroe@gmail.com>"]
 edition = "2021"
 include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]
 rust-version = "1.81"
 
-[workspace]
-members = [ "crates/*" ]
-
-[workspace.dependencies]
-#log = "0.4"
-glam = { version = "0.29.2", features = ["bytemuck"] }
-bytemuck = "*"
-wgpu = "*"
-
-
-[[bin]]
-path = "crates/app/src/main.rs"
-name = "pixit"
 
 [dependencies]
+wgpu = { workspace = true }
 egui = "0.30"
-egui_extras = { version = "0.30.0", features = [
-        "all_loaders",
-] }
 eframe = { version = "0.30.0", default-features = false, features = [
 	"accesskit",     # Make egui compatible with screen readers. NOTE: adds a lot of dependencies.
         "default_fonts", # Embed the default egui fonts.
@@ -34,19 +19,6 @@ eframe = { version = "0.30.0", default-features = false, features = [
 ] }
 egui_flex = "0.2.0"
 env_logger = "0.11"
-model = { path = "crates/model" }
-render = { path = "crates/render" }
-wgpu = { workspace = true }
-
-# You only need serde if you want app persistence:
-
-[profile.release]
-opt-level = 2 # fast and small wasm
-
-# Optimize all dependencies even in debug builds:
-[profile.dev.package."*"]
-opt-level = 2
-
-
-[patch.crates-io]
-
+#egui_extras = { version = "0.30.0", features = [
+#        "all_loaders",
+#] }
