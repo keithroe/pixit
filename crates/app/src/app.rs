@@ -1,5 +1,4 @@
 use egui_flex::Flex;
-
 // TODO:
 //     * decide on app-restore or not
 
@@ -44,6 +43,7 @@ impl App {
         }
     }
 
+    // TODO: make viewport class to handle screen to NDC, etc
     fn render_left_viewport(&mut self, ui: &mut egui::Ui) {
         self.renderer.render();
         let image = egui::Image::from_texture(self.render_texture)
@@ -51,11 +51,18 @@ impl App {
             .max_size(egui::Vec2::new(512.0, 512.0));
         let response = ui.add(image);
         if response.dragged() {
-            println!(
-                "dragged {} from {:?}",
-                response.drag_motion(),
-                response.interact_pointer_pos().unwrap() - response.rect.min,
-            );
+            let drag0 = response.interact_pointer_pos().unwrap() - response.rect.min;
+            let drag1 = drag0 + response.drag_motion();
+            let drag0 = glam::Vec2::new(drag0.x, 512.0 - drag0.y);
+            let drag1 = glam::Vec2::new(drag1.x, 512.0 - drag1.y);
+            let drag0 = (drag0 - glam::Vec2::new(256.0, 256.0)) / 256.0;
+            let drag1 = (drag1 - glam::Vec2::new(256.0, 256.0)) / 256.0;
+            self.renderer
+                .camera_state
+                .camera
+                .camera_view
+                .rotate(drag0, drag1);
+            //println!("dragged {} from {:?}", drag0, drag1);
         }
     }
 

@@ -8,6 +8,7 @@ rust-version = "1.81"
 
 
 [dependencies]
+glam = { workspace = true }
 wgpu = { workspace = true }
 egui = "0.30"
 eframe = { version = "0.30.0", default-features = false, features = [

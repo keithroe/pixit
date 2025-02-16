@@ -26,8 +26,8 @@ const VERTICES: &[Vertex] = &[
     },
 ];
 
-struct CameraState {
-    camera: camera::Camera,
+pub struct CameraState {
+    pub camera: camera::Camera,
     matrix: glam::Mat4,
     matrix_buffer: wgpu::Buffer,
     matrix_bind_group_layout: wgpu::BindGroupLayout,
@@ -36,15 +36,15 @@ struct CameraState {
 
 impl CameraState {
     fn init(device: &wgpu::Device) -> Self {
-        let camera = camera::Camera {
-            eye: (0.0, 0.0, 20.0).into(),
-            look_at: (0.0, 0.0, 0.0).into(),
-            up: (0.0, 1.0, 0.0).into(),
-            fovy: std::f32::consts::PI / 4.0,
-            aspect: 1.0,
-            znear: 0.01,
-            zfar: 1000.0,
-        };
+        let camera = camera::Camera::new(
+            (0.0, 0.0, 20.0).into(),
+            (0.0, 0.0, 0.0).into(),
+            (0.0, 1.0, 0.0).into(),
+            std::f32::consts::PI / 4.0,
+            1.0,
+            0.01,
+            1000.0,
+        );
         let matrix = camera.view_projection_matrix();
 
         let matrix_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -135,7 +135,7 @@ pub struct Renderer {
     render_texture: RenderTexture,
     render_pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
-    camera_state: CameraState,
+    pub camera_state: CameraState, // TODO
 }
 
 // TODO: create render_pipeline to store reusable part of render pass
@@ -214,7 +214,7 @@ impl Renderer {
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
-                cull_mode: Some(wgpu::Face::Back),
+                cull_mode: None,
                 // Setting this to anything other than Fill requires Features::POLYGON_MODE_LINE
                 // or Features::POLYGON_MODE_POINT
                 polygon_mode: wgpu::PolygonMode::Fill,
@@ -254,6 +254,12 @@ impl Renderer {
             });
 
         {
+            let camera_matrix = self.camera_state.camera.view_projection_matrix();
+            self.queue.write_buffer(
+                &self.camera_state.matrix_buffer,
+                0,
+                bytemuck::cast_slice(&[camera_matrix]),
+            );
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
                 color_attachments: &[
