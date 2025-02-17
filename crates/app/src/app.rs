@@ -2,12 +2,52 @@ use egui_flex::Flex;
 // TODO:
 //     * decide on app-restore or not
 
+struct RenderViewport {
+    size: glam::IVec2,
+    renderer: render::Renderer,
+    render_texture: egui::load::SizedTexture,
+}
+
+impl RenderViewport {
+    fn draw(&mut self, ui: &mut egui::Ui) {
+        self.renderer.render();
+        let image = egui::Image::from_texture(self.render_texture)
+            .sense(egui::Sense::drag())
+            .max_size(egui::Vec2::new(512.0, 512.0));
+        let response = ui.add(image);
+        if response.dragged() {
+            let raster_drag0 = response.interact_pointer_pos().unwrap() - response.rect.min;
+            let raster_drag1 = raster_drag0 + response.drag_motion();
+            let drag0 = self.raster_to_ndc(glam::Vec2::new(raster_drag0.x, raster_drag0.y));
+            let drag1 = self.raster_to_ndc(glam::Vec2::new(raster_drag1.x, raster_drag1.y));
+            self.renderer
+                .camera_state
+                .camera
+                .camera_view
+                .rotate(drag0, drag1);
+            //println!("dragged {} from {:?}", drag0, drag1);
+        }
+    }
+
+    fn raster_to_ndc(&self, r: glam::Vec2) -> glam::Vec2 {
+        // invert y
+        let r = glam::Vec2::new(r.x, self.size.y as f32 - r.y);
+
+        // center around origin, then scale to [-1,1]^2
+        let half_size = self.size.as_vec2() * 0.5;
+        (r - half_size) / half_size
+    }
+}
+
 pub struct App {
     num_frames: i32,
     cur_frame: i32,
 
+    render_viewport: RenderViewport,
+    /*
     renderer: render::Renderer,
     render_texture: egui::load::SizedTexture,
+    */
 }
 
 impl App {
@@ -32,19 +72,28 @@ impl App {
             renderer.get_render_texture_view(),
             wgpu::FilterMode::Nearest,
         );
+
+        let render_texture = egui::load::SizedTexture {
+            size: egui::Vec2::new(App::VIEWPORT_WIDTH as f32, App::VIEWPORT_HEIGHT as f32),
+            id: render_texture_id,
+        };
+
         App {
             num_frames: 60, // TODO: connect this value
             cur_frame: 0,
-            renderer,
-            render_texture: egui::load::SizedTexture {
-                size: egui::Vec2::new(App::VIEWPORT_WIDTH as f32, App::VIEWPORT_HEIGHT as f32),
-                id: render_texture_id,
+            render_viewport: RenderViewport {
+                size: glam::IVec2::splat(512),
+                render_texture,
+                renderer,
             },
         }
     }
 
     // TODO: make viewport class to handle screen to NDC, etc
     fn render_left_viewport(&mut self, ui: &mut egui::Ui) {
+        self.render_viewport.draw(ui);
+
+        /*
         self.renderer.render();
         let image = egui::Image::from_texture(self.render_texture)
             .sense(egui::Sense::drag())
@@ -64,6 +113,7 @@ impl App {
                 .rotate(drag0, drag1);
             //println!("dragged {} from {:?}", drag0, drag1);
         }
+        */
     }
 
     fn render_right_viewport(&mut self, ui: &mut egui::Ui) {
