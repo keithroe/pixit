@@ -28,7 +28,6 @@ const VERTICES: &[Vertex] = &[
 
 pub struct CameraState {
     pub camera: camera::Camera,
-    matrix: glam::Mat4,
     matrix_buffer: wgpu::Buffer,
     matrix_bind_group_layout: wgpu::BindGroupLayout,
     matrix_bind_group: wgpu::BindGroup,
@@ -37,7 +36,7 @@ pub struct CameraState {
 impl CameraState {
     fn init(device: &wgpu::Device) -> Self {
         let camera = camera::Camera::new(
-            (0.0, 0.0, 20.0).into(),
+            (0.0, 0.0, 2.0).into(),
             (0.0, 0.0, 0.0).into(),
             (0.0, 1.0, 0.0).into(),
             std::f32::consts::PI / 4.0,
@@ -79,7 +78,6 @@ impl CameraState {
 
         Self {
             camera,
-            matrix,
             matrix_buffer,
             matrix_bind_group_layout,
             matrix_bind_group,

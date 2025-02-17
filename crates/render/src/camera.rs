@@ -1,3 +1,5 @@
+// TODO: hide camera classes outside of crate
+
 /// * operates in NDC
 /// * arcball for view
 pub struct CameraView {
@@ -10,16 +12,11 @@ pub struct CameraView {
 
 impl CameraView {
     pub fn new(eye: glam::Vec3, look_at: glam::Vec3, up: glam::Vec3) -> Self {
-        println!("YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY");
         let look_dir = look_at - eye;
         let z_axis = look_dir.normalize();
         let x_axis = z_axis.cross(up.normalize()).normalize();
         let y_axis = x_axis.cross(z_axis).normalize();
         let x_axis = z_axis.cross(y_axis);
-
-        println!("x: {}", x_axis);
-        println!("y: {}", y_axis);
-        println!("z: {}", z_axis);
 
         let pan_translation = -look_at;
         let dolly_translation = glam::Vec3::new(0.0, 0.0, -look_dir.length());
@@ -31,11 +28,6 @@ impl CameraView {
         )))
         .normalize();
 
-        println!("pan  : {}", pan_translation);
-        println!("dolly: {}", dolly_translation);
-        println!("rotation: {}", rotation);
-        println!("rotation_matrix: {}", glam::Mat4::from_quat(rotation));
-
         Self {
             pan_translation,
             dolly_translation,
@@ -45,20 +37,13 @@ impl CameraView {
 
     pub fn rotate(&mut self, pos0: glam::Vec2, pos1: glam::Vec2) {
         // Clamp to NDC
-        println!("p0: {}", pos0);
-        println!("p1: {}", pos1);
         let pos0 = pos0.clamp(glam::Vec2::new(-1.0, -1.0), glam::Vec2::new(1.0, 1.0));
         let pos1 = pos1.clamp(glam::Vec2::new(-1.0, -1.0), glam::Vec2::new(1.0, 1.0));
-        println!("p0: {}", pos0);
-        println!("p1: {}", pos1);
 
         let arcball0 = pos_to_arcball(pos0);
         let arcball1 = pos_to_arcball(pos1);
-        println!("ab0: {}", arcball0);
-        println!("ab1: {}", arcball1);
 
         self.rotation = arcball1 * arcball0 * self.rotation;
-        println!("self.rotation: {}", self.rotation);
     }
 
     pub fn dolly(&mut self, amount: f32) {
@@ -97,7 +82,7 @@ fn pos_to_arcball(pos: glam::Vec2) -> glam::Quat {
     }
 }
 
-struct CameraProjection {
+pub struct CameraProjection {
     pub aspect: f32,
     pub fovy: f32,
     pub znear: f32,
@@ -112,9 +97,6 @@ impl CameraProjection {
 
 // TODO: API here
 pub struct Camera {
-    eye: glam::Vec3,
-    look_at: glam::Vec3,
-    up: glam::Vec3,
     pub camera_view: CameraView,
     pub camera_projection: CameraProjection,
 }
@@ -131,9 +113,6 @@ impl Camera {
         zfar: f32,
     ) -> Self {
         Self {
-            eye,
-            look_at,
-            up,
             camera_view: CameraView::new(eye, look_at, up),
             camera_projection: CameraProjection {
                 aspect,
@@ -145,9 +124,6 @@ impl Camera {
     }
     pub fn view_projection_matrix(&self) -> glam::Mat4 {
         let view = self.camera_view.matrix();
-        println!("rotation: {}", self.camera_view.rotation);
-        println!("view_0: {}", view);
-        //let view = glam::Mat4::look_at_rh(self.eye, self.look_at, self.up);
         let proj = self.camera_projection.matrix();
         proj * view
     }
