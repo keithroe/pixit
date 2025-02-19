@@ -1,8 +1,42 @@
 use glam::IVec3;
 use glam::Vec3;
 
+pub struct BoundingBox {
+    pub min: glam::Vec3,
+    pub max: glam::Vec3,
+}
+
+impl BoundingBox {
+    pub fn new(p0: glam::Vec3, p1: glam::Vec3) -> Self {
+        let mut bbox = Self::default();
+        bbox.expand_by_point(p0);
+        bbox.expand_by_point(p1);
+        bbox
+    }
+
+    pub fn expand_by_point(&mut self, p: glam::Vec3) {
+        self.min = self.min.min(p);
+        self.max = self.max.max(p);
+    }
+
+    pub fn expand_by_bbox(&mut self, bbox: &BoundingBox) {
+        self.min = self.min.min(bbox.min);
+        self.max = self.max.max(bbox.max);
+    }
+}
+
+impl Default for BoundingBox {
+    fn default() -> Self {
+        Self {
+            min: glam::Vec3::MAX,
+            max: glam::Vec3::MIN,
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct Model {
+    pub bbox: BoundingBox,
     pub verts: Vec<Vec3>,
     pub indices: Vec<IVec3>,
 }
@@ -26,12 +60,19 @@ impl Model {
 
     fn process_mesh(&mut self, mesh: gltf::Mesh<'_>, buffers: &[gltf::buffer::Data]) {
         for primitive in mesh.primitives() {
-            let bbox = primitive.bounding_box();
+            let bbox_gltf = primitive.bounding_box();
+            let bbox = BoundingBox::new(
+                glam::Vec3::from_slice(&bbox_gltf.min),
+                glam::Vec3::from_slice(&bbox_gltf.max),
+            );
+            self.bbox.expand_by_bbox(&bbox);
             println!("\tprim bbox: {:?} - {:?}", bbox.min, bbox.max);
+
             let reader = primitive.reader(|buffer| Some(&buffers[buffer.index()]));
             if let Some(p) = reader.read_positions() {
                 println!("\tP len: {}", p.len());
                 self.verts = p.map(|x| Vec3::new(x[0], x[1], x[2])).collect();
+                // TODO: transforms
             }
 
             if let Some(n) = reader.read_normals() {

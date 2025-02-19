@@ -29,6 +29,7 @@ const VERTICES: &[Vertex] = &[
 pub struct CameraState {
     pub camera: camera::Camera,
     matrix_buffer: wgpu::Buffer,
+    // TODO: move all wgpu state into WGPUState?
     matrix_bind_group_layout: wgpu::BindGroupLayout,
     matrix_bind_group: wgpu::BindGroup,
 }
@@ -132,6 +133,7 @@ pub struct Renderer {
     device: std::sync::Arc<wgpu::Device>,
     render_texture: RenderTexture,
     render_pipeline: wgpu::RenderPipeline,
+    vertex_count: u32,
     vertex_buffer: wgpu::Buffer,
     pub camera_state: CameraState, // TODO
 }
@@ -144,16 +146,27 @@ impl Renderer {
         height: u32,
         device: std::sync::Arc<wgpu::Device>,
         queue: std::sync::Arc<wgpu::Queue>,
-        _model: &model::Model,
+        model: &model::Model,
     ) -> Self {
         let render_texture = RenderTexture::new(width, height, &device);
 
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(VERTICES),
+            //contents: bytemuck::cast_slice(VERTICES),
+            contents: bytemuck::cast_slice(model.verts.as_slice()),
             usage: wgpu::BufferUsages::VERTEX,
         });
 
+        let vbuffer_layout = wgpu::VertexBufferLayout {
+            array_stride: std::mem::size_of::<glam::Vec3>() as wgpu::BufferAddress,
+            step_mode: wgpu::VertexStepMode::Vertex,
+            attributes: &[wgpu::VertexAttribute {
+                offset: 0,
+                shader_location: 0,
+                format: wgpu::VertexFormat::Float32x3,
+            }],
+        };
+        /*
         let vbuffer_layout = wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress, // 1.
             step_mode: wgpu::VertexStepMode::Vertex,                            // 2.
@@ -171,6 +184,7 @@ impl Renderer {
                 },
             ],
         };
+        */
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
@@ -239,6 +253,7 @@ impl Renderer {
             device,
             queue,
             render_pipeline,
+            vertex_count: model.verts.len() as u32,
             vertex_buffer,
             camera_state,
         }
@@ -283,7 +298,8 @@ impl Renderer {
             render_pass.set_bind_group(0, &self.camera_state.matrix_bind_group, &[]);
             render_pass.set_pipeline(&self.render_pipeline); // 2.
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-            render_pass.draw(0..3, 0..1);
+            //render_pass.draw(0..3, 0..1);
+            render_pass.draw(0..self.vertex_count, 0..1);
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));
