@@ -23,6 +23,14 @@ impl BoundingBox {
         self.min = self.min.min(bbox.min);
         self.max = self.max.max(bbox.max);
     }
+
+    pub fn mid(&self) -> glam::Vec3 {
+        (self.min + self.max) * 0.5
+    }
+
+    pub fn longest_axis(&self) -> f32 {
+        (self.max - self.min).max_element()
+    }
 }
 
 impl Default for BoundingBox {

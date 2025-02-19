@@ -5,26 +5,6 @@ mod camera;
 use wgpu::util::DeviceExt; // for Device::create_buffer_init
                            //
                            // lib.rs
-#[repr(C)]
-#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-struct Vertex {
-    position: [f32; 3],
-    color: [f32; 3],
-}
-const VERTICES: &[Vertex] = &[
-    Vertex {
-        position: [0.0, 0.5, 0.0],
-        color: [1.0, 0.0, 0.0],
-    },
-    Vertex {
-        position: [-0.5, -0.5, 0.0],
-        color: [0.0, 1.0, 0.0],
-    },
-    Vertex {
-        position: [0.5, -0.5, 0.0],
-        color: [0.0, 0.0, 1.0],
-    },
-];
 
 pub struct CameraState {
     pub camera: camera::Camera,
@@ -35,11 +15,19 @@ pub struct CameraState {
 }
 
 impl CameraState {
-    fn init(device: &wgpu::Device) -> Self {
+    fn init(bbox: &model::BoundingBox, device: &wgpu::Device) -> Self {
+        let bbox_mid = bbox.mid();
+        let longest_axis = bbox.longest_axis();
         let camera = camera::Camera::new(
+            bbox_mid + glam::Vec3::new(0.0, 0.0, longest_axis*2.0),
+            bbox_mid,
+            (0.0, 1.0, 0.0).into(),
+
+            /*
             (0.0, 0.0, 2.0).into(),
             (0.0, 0.0, 0.0).into(),
             (0.0, 1.0, 0.0).into(),
+            */
             std::f32::consts::PI / 4.0,
             1.0,
             0.01,
@@ -191,7 +179,7 @@ impl Renderer {
             source: wgpu::ShaderSource::Wgsl(include_str!("../shader/render.wgsl").into()),
         });
 
-        let camera_state = CameraState::init(&device);
+        let camera_state = CameraState::init(&model.bbox, &device);
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
