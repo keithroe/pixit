@@ -122,6 +122,7 @@ pub struct Renderer {
     render_pipeline: wgpu::RenderPipeline,
     vertex_count: u32,
     vertex_buffer: wgpu::Buffer,
+    model_scale: f32,
     pub camera_state: CameraState, // TODO
 }
 
@@ -242,6 +243,7 @@ impl Renderer {
             render_pipeline,
             vertex_count: model.verts.len() as u32,
             vertex_buffer,
+            model_scale: model.bbox.longest_axis(),
             camera_state,
         }
     }
@@ -260,22 +262,48 @@ impl Renderer {
     }
 
     pub fn handle_event(&mut self, event: event::Event) {
-        match event {
-            event::Event::Drag {
-                button: _,
-                drag_begin,
-                drag_end,
-                modifiers: _,
-            } => {
-                let drag_begin = self.raster_to_ndc(drag_begin);
-                let drag_end = self.raster_to_ndc(drag_end);
-                self.camera_state
-                    .camera
-                    .camera_view
-                    .rotate(drag_begin, drag_end);
+        if let event::Event::Drag {
+            button: button,
+            drag_begin,
+            drag_end,
+            modifiers: _,
+        } = event
+        {
+            let drag_begin = self.raster_to_ndc(drag_begin);
+            let drag_end = self.raster_to_ndc(drag_end);
+            match button {
+                event::MouseButton::Primary => {
+                    self.camera_state
+                        .camera
+                        .camera_view
+                        .rotate(drag_begin, drag_end);
+                }
+                event::MouseButton::Secondary => {
+                    self.camera_state
+                        .camera
+                        .camera_view
+                        .pan(drag_begin - drag_end);
+                }
+                event::MouseButton::Middle => {
+                    self.camera_state
+                        .camera
+                        .camera_view
+                        .dolly((drag_begin.y - drag_end.y) * self.model_scale);
+                }
+                _ => {}
             }
+        }
+        /*
+        match event {
+            event::Event::Drag{event::MouseButton::Primary, drag_begin, drag_end, modifiers} => {
+            },
+            event::Event::Drag{event::MouseButton::Secondary, drag_begin, drag_end, modifiers} => {
+            },
+            event::Event::Drag{event::MouseButton::Middle, drag_begin, drag_end, modifiers} => {
+            },
             _ => {}
         }
+        */
     }
 
     pub fn render(&self) {
