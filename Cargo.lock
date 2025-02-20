@@ -1184,6 +1184,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "event"
+version = "0.1.0"
+dependencies = [
+ "glam",
+]
+
+[[package]]
 name = "event-listener"
 version = "2.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2439,6 +2446,7 @@ dependencies = [
  "egui_extras",
  "egui_flex",
  "env_logger",
+ "event",
  "glam",
  "model",
  "render",
@@ -2454,6 +2462,8 @@ dependencies = [
  "egui_flex",
  "env_logger",
  "glam",
+ "model",
+ "render",
  "wgpu",
 ]
 
@@ -2651,6 +2661,7 @@ name = "render"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
+ "event",
  "glam",
  "model",
  "wgpu",

@@ -10,6 +10,9 @@ rust-version = "1.81"
 [dependencies]
 glam = { workspace = true }
 wgpu = { workspace = true }
+render = { path = "../render" }
+model  = { path = "../model" }
+
 egui = "0.30"
 eframe = { version = "0.30.0", default-features = false, features = [
 	"accesskit",     # Make egui compatible with screen readers. NOTE: adds a lot of dependencies.

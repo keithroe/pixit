@@ -19,10 +19,9 @@ impl CameraState {
         let bbox_mid = bbox.mid();
         let longest_axis = bbox.longest_axis();
         let camera = camera::Camera::new(
-            bbox_mid + glam::Vec3::new(0.0, 0.0, longest_axis*2.0),
+            bbox_mid + glam::Vec3::new(0.0, 0.0, longest_axis * 1.5),
             bbox_mid,
             (0.0, 1.0, 0.0).into(),
-
             /*
             (0.0, 0.0, 2.0).into(),
             (0.0, 0.0, 0.0).into(),
@@ -244,6 +243,38 @@ impl Renderer {
             vertex_count: model.verts.len() as u32,
             vertex_buffer,
             camera_state,
+        }
+    }
+
+    fn raster_to_ndc(&self, r: glam::Vec2) -> glam::Vec2 {
+        let size = glam::Vec2::new(
+            self.render_texture.desc.size.width as f32,
+            self.render_texture.desc.size.height as f32,
+        );
+        // invert y
+        let r = glam::Vec2::new(r.x, size.y as f32 - r.y);
+
+        // center around origin, then scale to [-1,1]^2
+        let half_size = size * 0.5;
+        (r - half_size) / half_size
+    }
+
+    pub fn handle_event(&mut self, event: event::Event) {
+        match event {
+            event::Event::Drag {
+                button: _,
+                drag_begin,
+                drag_end,
+                modifiers: _,
+            } => {
+                let drag_begin = self.raster_to_ndc(drag_begin);
+                let drag_end = self.raster_to_ndc(drag_end);
+                self.camera_state
+                    .camera
+                    .camera_view
+                    .rotate(drag_begin, drag_end);
+            }
+            _ => {}
         }
     }
 

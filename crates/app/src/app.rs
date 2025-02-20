@@ -1,6 +1,5 @@
 use eframe::egui_wgpu;
 use egui_flex::Flex;
-use render;
 // TODO:
 //     * decide on app-restore or not
 
@@ -21,7 +20,7 @@ impl RenderViewport {
             App::VIEWPORT_HEIGHT,
             wgpu_render_state.device.clone(),
             wgpu_render_state.queue.clone(),
-            &model,
+            model,
         );
 
         let render_texture_id = wgpu_render_state.renderer.write().register_native_texture(
@@ -47,28 +46,31 @@ impl RenderViewport {
             .sense(egui::Sense::drag())
             .max_size(egui::Vec2::new(512.0, 512.0));
         let response = ui.add(image);
-        // TODO: right button drag?
+
         // TODO: dont expose camera, pass in the mouse events
         if response.dragged() {
-            let raster_drag0 = response.interact_pointer_pos().unwrap() - response.rect.min;
-            let raster_drag1 = raster_drag0 + response.drag_motion();
-            let drag0 = self.raster_to_ndc(glam::Vec2::new(raster_drag0.x, raster_drag0.y));
-            let drag1 = self.raster_to_ndc(glam::Vec2::new(raster_drag1.x, raster_drag1.y));
-            self.renderer
-                .camera_state
-                .camera
-                .camera_view
-                .rotate(drag0, drag1);
+            let egui_drag_begin = response.interact_pointer_pos().unwrap() - response.rect.min;
+            let egui_drag_end = egui_drag_begin + response.drag_motion();
+
+            let drag_begin = glam::Vec2::new(egui_drag_begin.x, egui_drag_begin.y);
+            let drag_end = glam::Vec2::new(egui_drag_end.x, egui_drag_end.y);
+            let modifiers = event::Modifiers::default(); // TODO: handle modifiers
+            let button = if response.dragged_by(egui::PointerButton::Primary) {
+                event::MouseButton::Primary
+            } else if response.dragged_by(egui::PointerButton::Secondary) {
+                event::MouseButton::Secondary
+            } else {
+                // if response.dragged_by(egui::PointerButton::Middle) {
+                event::MouseButton::Middle
+            };
+
+            self.renderer.handle_event(event::Event::Drag {
+                button,
+                modifiers,
+                drag_begin,
+                drag_end,
+            });
         }
-    }
-
-    fn raster_to_ndc(&self, r: glam::Vec2) -> glam::Vec2 {
-        // invert y
-        let r = glam::Vec2::new(r.x, self.size.y as f32 - r.y);
-
-        // center around origin, then scale to [-1,1]^2
-        let half_size = self.size.as_vec2() * 0.5;
-        (r - half_size) / half_size
     }
 }
 
