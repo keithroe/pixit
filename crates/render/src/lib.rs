@@ -215,12 +215,12 @@ impl ModelState {
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
             //contents: bytemuck::cast_slice(VERTICES),
-            contents: bytemuck::cast_slice(model.verts.as_slice()),
+            contents: bytemuck::cast_slice(model.positions.as_slice()),
             usage: wgpu::BufferUsages::VERTEX,
         });
 
         Self {
-            vertex_count: model.verts.len() as u32,
+            vertex_count: model.positions.len() as u32,
             vertex_buffer,
             model_scale: model.bbox.longest_axis(),
         }
