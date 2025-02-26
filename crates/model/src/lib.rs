@@ -45,8 +45,10 @@ impl Default for BoundingBox {
 #[derive(Default)]
 /// 3D triangle mesh model.
 ///
-/// Based on the GLTF model format.  Triangle may be indexed or a flat list of vertex attributes.
-/// All attributes except for joint indices are converted up to f32 (eg, from u16).
+/// Based looselty on the GLTF model format.  Triangle may be indexed or a flat list of vertex
+/// attributes. All attributes except for joint indices are converted up to f32 (eg, from u16). All
+/// vertex attributes are copied into separate, tightly packed arrays (de-interleaved and
+/// de-offset).
 pub struct Model {
     /// Object space bounding box of the model
     pub bbox: BoundingBox,
@@ -94,7 +96,7 @@ pub struct Model {
 }
 
 impl Model {
-    pub fn load(gltf_file: &str) -> Self {
+    pub fn from_gltf(gltf_file: &str) -> Self {
         let (document, buffers, _images) = gltf::import(gltf_file).expect("Failed to load GLTF");
 
         let mut model = Model::default();

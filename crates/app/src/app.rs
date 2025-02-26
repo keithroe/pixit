@@ -4,7 +4,6 @@ use egui_flex::Flex;
 //     * decide on app-restore or not
 
 struct RenderViewport {
-    size: glam::IVec2,
     renderer: render::Renderer,
     render_texture: egui::load::SizedTexture,
 }
@@ -34,7 +33,6 @@ impl RenderViewport {
             id: render_texture_id,
         };
         Self {
-            size,
             render_texture,
             renderer,
         }
@@ -87,7 +85,7 @@ impl App {
 
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let model = model::Model::load("assets/Fox.glb");
+        let model = model::Model::from_gltf("assets/Fox.glb");
 
         App {
             num_frames: 60, // TODO: connect this value
