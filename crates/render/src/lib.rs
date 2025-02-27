@@ -16,7 +16,7 @@ pub struct Renderer {
     //device: std::sync::Arc<wgpu::Device>,
     render_texture: RenderTexture,
     render_pipeline: wgpu::RenderPipeline,
-    model_state: ModelState,
+    model_state: Primitive,
     camera_state: CameraState, // TODO
 }
 
@@ -37,7 +37,7 @@ impl Renderer {
             source: wgpu::ShaderSource::Wgsl(include_str!("../shader/render.wgsl").into()),
         });
 
-        let model_state = ModelState::new(mesh, &device);
+        let model_state = Primitive::new(mesh, &device);
         let camera_state = CameraState::new(&mesh.bbox, &device);
 
         let render_pipeline_layout =
@@ -202,19 +202,34 @@ impl Renderer {
     }
 }
 
+struct ModelState {
+    scale: f32,
+    meshes: Vec<Mesh>,
+}
+
+struct Mesh {
+    prims: Vec<Primitive>,
+}
+
 ///
 /// The 3D model to be rendered
 ///
 /// Stores device side representation of the model and metadata to facilitate host-side
 /// operations (eg, camera orientation toward model)
 ///
-struct ModelState {
+struct Primitive {
+    index_count: u32,
+    index_buffer: wgpu::Buffer,
+
     vertex_count: u32,
     vertex_buffer: wgpu::Buffer,
-    model_scale: f32,
+
+    pipeline: wgpu::RenderPipeline,
+
+    material: u32, // TODO: placeholder
 }
 
-impl ModelState {
+impl Primitive {
     fn new(mesh: &model::Mesh, device: &wgpu::Device) -> Self {
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
