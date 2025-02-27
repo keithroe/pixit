@@ -10,8 +10,10 @@ use wgpu::util::DeviceExt;
 /// Handles user events (eg, mouse drag) and renders model to offscreen texture.
 ///
 pub struct Renderer {
-    queue: std::sync::Arc<wgpu::Queue>,
-    device: std::sync::Arc<wgpu::Device>,
+    queue: wgpu::Queue,
+    device: wgpu::Device,
+    //queue: std::sync::Arc<wgpu::Queue>,
+    //device: std::sync::Arc<wgpu::Device>,
     render_texture: RenderTexture,
     render_pipeline: wgpu::RenderPipeline,
     model_state: ModelState,
@@ -22,9 +24,11 @@ impl Renderer {
     pub fn new(
         width: u32,
         height: u32,
-        device: std::sync::Arc<wgpu::Device>,
-        queue: std::sync::Arc<wgpu::Queue>,
-        model: &model::Model,
+        //device: std::sync::Arc<wgpu::Device>,
+        //queue: std::sync::Arc<wgpu::Queue>,
+        device: wgpu::Device,
+        queue: wgpu::Queue,
+        mesh: &model::Mesh,
     ) -> Self {
         let render_texture = RenderTexture::new(width, height, &device);
 
@@ -33,8 +37,8 @@ impl Renderer {
             source: wgpu::ShaderSource::Wgsl(include_str!("../shader/render.wgsl").into()),
         });
 
-        let model_state = ModelState::new(model, &device);
-        let camera_state = CameraState::new(&model.bbox, &device);
+        let model_state = ModelState::new(mesh, &device);
+        let camera_state = CameraState::new(&mesh.bbox, &device);
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -211,18 +215,18 @@ struct ModelState {
 }
 
 impl ModelState {
-    fn new(model: &model::Model, device: &wgpu::Device) -> Self {
+    fn new(mesh: &model::Mesh, device: &wgpu::Device) -> Self {
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
             //contents: bytemuck::cast_slice(VERTICES),
-            contents: bytemuck::cast_slice(model.positions.as_slice()),
+            contents: bytemuck::cast_slice(mesh.primitives.first().unwrap().positions.as_slice()),
             usage: wgpu::BufferUsages::VERTEX,
         });
 
         Self {
-            vertex_count: model.positions.len() as u32,
+            vertex_count: mesh.primitives.first().unwrap().positions.len() as u32,
             vertex_buffer,
-            model_scale: model.bbox.longest_axis(),
+            model_scale: mesh.bbox.longest_axis(),
         }
     }
 

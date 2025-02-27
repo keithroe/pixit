@@ -1,5 +1,7 @@
 use eframe::egui_wgpu;
+use eframe::{wgpu::Device, wgpu::Queue};
 use egui_flex::Flex;
+
 // TODO:
 //     * decide on app-restore or not
 
@@ -12,14 +14,14 @@ impl RenderViewport {
     fn new(
         size: glam::IVec2,
         wgpu_render_state: &egui_wgpu::RenderState,
-        model: &model::Model,
+        mesh: &model::Mesh,
     ) -> Self {
         let renderer = render::Renderer::new(
             App::VIEWPORT_WIDTH,
             App::VIEWPORT_HEIGHT,
             wgpu_render_state.device.clone(),
             wgpu_render_state.queue.clone(),
-            model,
+            mesh,
         );
 
         let render_texture_id = wgpu_render_state.renderer.write().register_native_texture(
@@ -85,7 +87,7 @@ impl App {
 
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let model = model::Model::from_gltf("assets/Fox.glb");
+        let mesh = model::Mesh::from_gltf("assets/Fox.glb");
 
         App {
             num_frames: 60, // TODO: connect this value
@@ -93,7 +95,7 @@ impl App {
             render_viewport: RenderViewport::new(
                 glam::IVec2::splat(512),
                 cc.wgpu_render_state.as_ref().unwrap(),
-                &model,
+                &mesh,
             ),
         }
     }
@@ -127,7 +129,7 @@ impl eframe::App for App {
                     flex.add_ui(
                         egui_flex::FlexItem::default()
                             .grow(1.0)
-                            .frame(egui::Frame::group(flex.ui().style())),
+                            .frame(egui::Frame::group(&flex.ui().style())),
                         |ui| {
                             Flex::horizontal()
                                 .w_full()

@@ -9,3 +9,4 @@ rust-version = "1.81"
 [dependencies]
 gltf = "1.4.1"
 glam = { workspace = true } 
+itertools = "0.14.0"

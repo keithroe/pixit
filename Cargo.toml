@@ -21,18 +21,18 @@ path = "crates/app/src/main.rs"
 name = "pixit"
 
 [dependencies]
-egui = "0.30"
-egui_extras = { version = "0.30.0", features = [
+egui = "0.31"
+egui_extras = { version = "0.31.0", features = [
         "all_loaders",
 ] }
-eframe = { version = "0.30.0", default-features = false, features = [
+eframe = { version = "0.31.0", default-features = false, features = [
         "accesskit",     # Make egui compatible with screen readers. NOTE: adds a lot of dependencies.
         "default_fonts", # Embed the default egui fonts.
         "wgpu",          # Use the glow rendering backend. Alternative: "wgpu".
         "persistence",   # Enable restoring app state when restarting the app.
         "x11",           # To support Linux (and CI)
 ] }
-egui_flex = "0.2.0"
+egui_flex = "0.3.0"
 env_logger = "0.11"
 event = { path = "crates/event" }
 model = { path = "crates/model" }
