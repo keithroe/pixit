@@ -7,13 +7,13 @@ include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]
 rust-version = "1.81"
 
 [workspace]
-members = [ "crates/*" ]
+members = [ "crates/event", "crates/model", "crates/render" ]
 
 [workspace.dependencies]
 #log = "0.4"
 glam = { version = "0.29.2", features = ["bytemuck"] }
 bytemuck = "*"
-wgpu = "*"
+wgpu = "24.0.0"
 
 
 [[bin]]

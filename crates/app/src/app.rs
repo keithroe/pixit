@@ -14,11 +14,10 @@ impl RenderViewport {
     fn new(
         size: glam::IVec2,
         wgpu_render_state: &egui_wgpu::RenderState,
-        mesh: &model::Mesh,
+        mesh: &model::Model,
     ) -> Self {
         let renderer = render::Renderer::new(
-            App::VIEWPORT_WIDTH,
-            App::VIEWPORT_HEIGHT,
+            &[App::VIEWPORT_WIDTH, App::VIEWPORT_HEIGHT],
             wgpu_render_state.device.clone(),
             wgpu_render_state.queue.clone(),
             mesh,
@@ -87,7 +86,7 @@ impl App {
 
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let mesh = model::Mesh::from_gltf("assets/Fox.glb");
+        let model = model::Model::from_gltf("assets/Fox.glb");
 
         App {
             num_frames: 60, // TODO: connect this value
@@ -95,7 +94,7 @@ impl App {
             render_viewport: RenderViewport::new(
                 glam::IVec2::splat(512),
                 cc.wgpu_render_state.as_ref().unwrap(),
-                &mesh,
+                &model,
             ),
         }
     }
