@@ -100,9 +100,7 @@ impl Model {
     }
 }
 
-///
-///
-///
+/// Skin
 #[derive(Default)]
 pub struct Skin {}
 

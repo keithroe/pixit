@@ -1,4 +1,4 @@
-use wgpu::{util::DeviceExt, PrimitiveTopology};
+use wgpu::util::DeviceExt;
 
 use crate::camera;
 use crate::light;
@@ -28,7 +28,7 @@ impl Scene {
 
         for mesh in &model.meshes {
             let skin_id = if let Some(skin) = &mesh.skin {
-                scene.skins.push(WGPUSkin::new(&skin, device));
+                scene.skins.push(WGPUSkin::new(skin, device));
                 Some((scene.skins.len() - 1) as u32)
             } else {
                 None
@@ -151,7 +151,7 @@ pub struct WGPUMesh {
 
     pub num_triangles: u32,
     pub vertex_buffer: wgpu::Buffer,
-    pub index_buffer: Option<wgpu::Buffer>,
+    pub _index_buffer: Option<wgpu::Buffer>,
 }
 
 impl WGPUMesh {
@@ -179,7 +179,7 @@ impl WGPUMesh {
             material_id: None,
             num_triangles: prim.positions.len() as u32,
             vertex_buffer,
-            index_buffer,
+            _index_buffer: index_buffer,
         }
     }
 }
@@ -187,7 +187,7 @@ impl WGPUMesh {
 pub struct WGPUSkin {}
 
 impl WGPUSkin {
-    pub fn new(model_skin: &model::Skin, device: &wgpu::Device) -> Self {
+    pub fn new(_model_skin: &model::Skin, _device: &wgpu::Device) -> Self {
         Self {}
     }
 }

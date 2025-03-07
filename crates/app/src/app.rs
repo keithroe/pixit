@@ -1,5 +1,5 @@
 use eframe::egui_wgpu;
-use eframe::{wgpu::Device, wgpu::Queue};
+//use eframe::{wgpu::Device, wgpu::Queue};
 use egui_flex::Flex;
 
 // TODO:
@@ -11,11 +11,7 @@ struct RenderViewport {
 }
 
 impl RenderViewport {
-    fn new(
-        size: glam::IVec2,
-        wgpu_render_state: &egui_wgpu::RenderState,
-        mesh: &model::Model,
-    ) -> Self {
+    fn new(wgpu_render_state: &egui_wgpu::RenderState, mesh: &model::Model) -> Self {
         let renderer = render::Renderer::new(
             &[App::VIEWPORT_WIDTH, App::VIEWPORT_HEIGHT],
             wgpu_render_state.device.clone(),
@@ -91,11 +87,7 @@ impl App {
         App {
             num_frames: 60, // TODO: connect this value
             cur_frame: 0,
-            render_viewport: RenderViewport::new(
-                glam::IVec2::splat(512),
-                cc.wgpu_render_state.as_ref().unwrap(),
-                &model,
-            ),
+            render_viewport: RenderViewport::new(cc.wgpu_render_state.as_ref().unwrap(), &model),
         }
     }
 
@@ -128,7 +120,7 @@ impl eframe::App for App {
                     flex.add_ui(
                         egui_flex::FlexItem::default()
                             .grow(1.0)
-                            .frame(egui::Frame::group(&flex.ui().style())),
+                            .frame(egui::Frame::group(flex.ui().style())),
                         |ui| {
                             Flex::horizontal()
                                 .w_full()
