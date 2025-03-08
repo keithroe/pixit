@@ -82,7 +82,8 @@ impl App {
 
     /// Called once before the first frame.
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        let model = model::Model::from_gltf("assets/Fox.glb");
+        //let model = model::Model::from_gltf("assets/Fox.glb");
+        let model = model::Model::from_gltf("assets/Avocado.glb");
 
         App {
             num_frames: 60, // TODO: connect this value

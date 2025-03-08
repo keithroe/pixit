@@ -118,8 +118,16 @@ impl Renderer {
                 render_pass.set_bind_group(0, &self.scene.camera.bind_group, &[]);
                 render_pass.set_pipeline(&self.render_pipelines[mesh_idx]); // 2.
                 render_pass.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
+                if let Some(nbuff) = &mesh.normal_buffer {
+                    render_pass.set_vertex_buffer(1, nbuff.slice(..));
+                }
+                if let Some(ibuff) = &mesh._index_buffer {
+                    render_pass.set_index_buffer(ibuff.slice(..), wgpu::IndexFormat::Uint32);
+                    render_pass.draw_indexed(0..mesh.num_triangles * 3, 0, 0..1);
+                } else {
+                    render_pass.draw(0..mesh.num_triangles, 0..1);
+                }
                 //render_pass.draw(0..3, 0..1);
-                render_pass.draw(0..mesh.num_triangles, 0..1);
             }
             self.queue.submit(std::iter::once(encoder.finish()));
         }
@@ -229,7 +237,7 @@ fn generate_pipelines(
 ) -> Vec<wgpu::RenderPipeline> {
     let mut pipelines = Vec::new();
 
-    for _mesh in &scene.meshes {
+    for mesh in &scene.meshes {
         // build render pipeline layout
         let bind_group_layouts = [&WGPUCamera::bind_group_layout(device)];
         let render_pipeline_layout =
@@ -240,25 +248,32 @@ fn generate_pipelines(
             });
 
         // build pipeline
-        let vertex_buffer_layouts = vec![wgpu::VertexBufferLayout {
+        let mut vertex_buffer_layouts = vec![wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<glam::Vec3>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &[wgpu::VertexAttribute {
+                // Positions
                 offset: 0,
                 shader_location: 0,
                 format: wgpu::VertexFormat::Float32x3,
             }],
         }];
 
-        //
-        // TODO: add other vertex attribute buffers
-        //
-
-        /*
-        if let Some(index_buffer) = &mesh.index_buffer {
-            todo!();
+        if mesh.normal_buffer.is_some() {
+            println!("setting normal buffer");
+            vertex_buffer_layouts.push(wgpu::VertexBufferLayout {
+                array_stride: std::mem::size_of::<glam::Vec3>() as wgpu::BufferAddress,
+                step_mode: wgpu::VertexStepMode::Vertex,
+                attributes: &[wgpu::VertexAttribute {
+                    // Normals
+                    offset: 0,
+                    shader_location: 1,
+                    format: wgpu::VertexFormat::Float32x3,
+                }],
+            });
+        } else {
+            println!("NOT setting normal buffer");
         }
-        */
 
         let vertex_state = wgpu::VertexState {
             module: vert_shader_module,

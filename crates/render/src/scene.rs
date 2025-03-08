@@ -152,10 +152,12 @@ pub struct WGPUMesh {
     pub num_triangles: u32,
     pub vertex_buffer: wgpu::Buffer,
     pub _index_buffer: Option<wgpu::Buffer>,
+    pub normal_buffer: Option<wgpu::Buffer>,
 }
 
 impl WGPUMesh {
     pub fn from_model_primitive(prim: &model::Primitive, device: &wgpu::Device) -> Self {
+        let mut num_triangles = prim.positions.len() as u32;
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
             contents: bytemuck::cast_slice(prim.positions.as_slice()),
@@ -163,23 +165,37 @@ impl WGPUMesh {
         });
 
         let index_buffer = if !prim.indices.is_empty() {
-            Some(
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Index Buffer"),
-                    contents: bytemuck::cast_slice(prim.indices.as_slice()),
-                    usage: wgpu::BufferUsages::INDEX,
-                }),
-            )
+            num_triangles = prim.indices.len() as u32;
+            let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Index Buffer"),
+                contents: bytemuck::cast_slice(prim.indices.as_slice()),
+                usage: wgpu::BufferUsages::INDEX,
+            });
+            Some(buffer)
         } else {
+            None
+        };
+
+        let normal_buffer = if !prim.normals.is_empty() {
+            let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("NormalBuffer"),
+                contents: bytemuck::cast_slice(prim.normals.as_slice()),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
+            println!("setting nbuff to SOME");
+            Some(buffer)
+        } else {
+            println!("setting nbuff to NONE");
             None
         };
 
         Self {
             skin_id: None,
             material_id: None,
-            num_triangles: prim.positions.len() as u32,
+            num_triangles,
             vertex_buffer,
             _index_buffer: index_buffer,
+            normal_buffer,
         }
     }
 }

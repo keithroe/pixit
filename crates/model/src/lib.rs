@@ -141,6 +141,7 @@ impl Mesh {
                 println!("\t\tattr: {}", attr.0.to_string());
             }
 
+            // Transform the bounding box to world space and store
             let bbox_gltf = primitive.bounding_box();
             let bbox = BoundingBox::new(
                 transform.transform_point3(glam::Vec3::from_slice(&bbox_gltf.min)),
@@ -172,6 +173,9 @@ impl Mesh {
 
             if let Some(n) = reader.read_normals() {
                 println!("\tN len: {}", n.len());
+                prim.normals = n
+                    .map(|x| transform.transform_point3(Vec3::new(x[0], x[1], x[2])))
+                    .collect();
             } else {
                 println!("\tN not found");
             }
@@ -247,6 +251,11 @@ pub struct Primitive {
     ///
     /// 2D texture coordinates.  A single model may have multiple tex coord sets.
     pub texcoords: Vec<Vec<glam::Vec2>>,
+
+    /// NORMAL vertex attribute.
+    ///
+    /// Objet space per-vertex normals
+    pub normals: Vec<glam::Vec3>,
 
     /// TANGENTS vertex attribute.
     ///

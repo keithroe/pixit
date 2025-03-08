@@ -2,12 +2,18 @@
 #version 450
 
 layout (location = 0) in vec3 pos;
+layout (location = 1) in vec3 normal;
 
 layout (set = 0, binding = 0)
 uniform mat4 transform;
 
+layout (location = 0) out vec3 P;
+layout (location = 1) out vec3 N;
+
 void main() {
-    gl_Position = transform * vec4(pos.x, pos.y, pos.z, 1.0);
+    gl_Position = transform * vec4(pos, 1.0); 
+    P = (transform * vec4(pos, 1.0)).xyz;
+    N = normal;
 }
 
 
