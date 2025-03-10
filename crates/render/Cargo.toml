@@ -7,9 +7,10 @@ include = ["LICENSE-APACHE", "LICENSE-MIT", "**/*.rs", "Cargo.toml"]
 rust-version = "1.81"
 
 [dependencies]
-wgpu = { workspace = true }
-glam = { workspace = true }
 bytemuck = { workspace = true }
+glam = { workspace = true }
+image = { workspace = true }
+wgpu = { workspace = true }
 
 model = { path = "../model" }
 event = { path = "../event" }

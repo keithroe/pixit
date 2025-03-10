@@ -122,6 +122,16 @@ impl Camera {
             },
         }
     }
+
+    pub fn view_matrix(&self) -> glam::Mat4 {
+        self.camera_view.matrix()
+    }
+
+    pub fn projection_matrix(&self) -> glam::Mat4 {
+        self.camera_projection.matrix()
+    }
+
+    #[allow(unused)]
     pub fn view_projection_matrix(&self) -> glam::Mat4 {
         let view = self.camera_view.matrix();
         let proj = self.camera_projection.matrix();

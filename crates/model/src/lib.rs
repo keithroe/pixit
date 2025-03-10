@@ -117,7 +117,10 @@ impl Skin {
 /// de-offset).
 #[derive(Default)]
 pub struct Mesh {
-    /// Object space bounding box of the model
+    /// Object to world (model) transform
+    pub transform: glam::Mat4,
+
+    /// *Object* space bounding box of the model
     pub bbox: BoundingBox,
 
     /// List of mesh primitives with pre-transformed vertex data
@@ -132,9 +135,12 @@ impl Mesh {
         mesh_node: &gltf::Mesh,
         skin_node: Option<gltf::Skin>,
         buffers: &[gltf::buffer::Data],
-        transform: Mat4,
+        transform: glam::Mat4,
     ) -> Self {
-        let mut mesh = Self::default();
+        let mut mesh = Mesh {
+            transform,
+            ..Default::default()
+        };
 
         for primitive in mesh_node.primitives() {
             for attr in primitive.attributes() {
@@ -144,8 +150,8 @@ impl Mesh {
             // Transform the bounding box to world space and store
             let bbox_gltf = primitive.bounding_box();
             let bbox = BoundingBox::new(
-                transform.transform_point3(glam::Vec3::from_slice(&bbox_gltf.min)),
-                transform.transform_point3(glam::Vec3::from_slice(&bbox_gltf.max)),
+                glam::Vec3::from_slice(&bbox_gltf.min),
+                glam::Vec3::from_slice(&bbox_gltf.max),
             );
             mesh.bbox.expand_by_bbox(&bbox);
             println!("\txformed prim bbox: {:?} - {:?}", bbox.min, bbox.max);
@@ -155,9 +161,7 @@ impl Mesh {
             let reader = primitive.reader(|buffer| Some(&buffers[buffer.index()]));
             if let Some(p) = reader.read_positions() {
                 println!("\tP len: {}", p.len());
-                prim.positions = p
-                    .map(|x| transform.transform_point3(Vec3::new(x[0], x[1], x[2])))
-                    .collect();
+                prim.positions = p.map(|x| Vec3::new(x[0], x[1], x[2])).collect();
             }
 
             if let Some(ienum) = reader.read_indices() {
@@ -173,9 +177,7 @@ impl Mesh {
 
             if let Some(n) = reader.read_normals() {
                 println!("\tN len: {}", n.len());
-                prim.normals = n
-                    .map(|x| transform.transform_point3(Vec3::new(x[0], x[1], x[2])))
-                    .collect();
+                prim.normals = n.map(|x| Vec3::new(x[0], x[1], x[2])).collect();
             } else {
                 println!("\tN not found");
             }

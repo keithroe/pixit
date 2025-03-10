@@ -3,6 +3,7 @@
 mod camera;
 mod light;
 mod scene;
+mod texture;
 
 use scene::*;
 
@@ -20,6 +21,7 @@ pub struct Renderer {
     scene: Scene,
 
     render_pipelines: Vec<wgpu::RenderPipeline>,
+    depth_texture: texture::Texture,
 }
 
 impl Renderer {
@@ -65,6 +67,8 @@ impl Renderer {
             &device,
         );
 
+        let depth_texture = texture::Texture::new_depth_texture(size, &device);
+
         Self {
             queue,
             device,
@@ -72,6 +76,7 @@ impl Renderer {
             //shader_module,
             scene,
             render_pipelines,
+            depth_texture,
         }
     }
 
@@ -80,6 +85,15 @@ impl Renderer {
     }
 
     pub fn render(&self) {
+        let view_matrix = self.scene.camera.controller.view_matrix();
+        let proj_matrix = self.scene.camera.controller.projection_matrix();
+        let view_proj = proj_matrix * view_matrix;
+        self.queue.write_buffer(
+            &self.scene.camera.view_proj_buffer,
+            0,
+            bytemuck::cast_slice(&[view_proj]),
+        );
+
         for (mesh_idx, mesh) in self.scene.meshes.iter().enumerate() {
             let mut encoder = self
                 .device
@@ -87,12 +101,20 @@ impl Renderer {
                     label: Some("Render Encoder"),
                 });
             {
-                let camera_matrix = self.scene.camera.controller.view_projection_matrix();
                 self.queue.write_buffer(
-                    &self.scene.camera.buffer,
+                    &self.scene.camera.view_proj_buffer,
                     0,
-                    bytemuck::cast_slice(&[camera_matrix]),
+                    bytemuck::cast_slice(&[view_proj]),
                 );
+
+                let model_matrix = mesh.transform;
+                let normal_transform = generate_normal_transform(view_matrix, model_matrix);
+                self.queue.write_buffer(
+                    &mesh.normal_transform_buffer,
+                    0,
+                    bytemuck::cast_slice(&[normal_transform]),
+                );
+
                 let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: Some("Render Pass"),
                     color_attachments: &[
@@ -111,17 +133,26 @@ impl Renderer {
                             },
                         }),
                     ],
-                    depth_stencil_attachment: None,
+                    depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                        view: &self.depth_texture.view,
+                        depth_ops: Some(wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(1.0),
+                            store: wgpu::StoreOp::Store,
+                        }),
+                        stencil_ops: None,
+                    }),
                     timestamp_writes: None,
                     occlusion_query_set: None,
                 });
                 render_pass.set_bind_group(0, &self.scene.camera.bind_group, &[]);
+                render_pass.set_bind_group(1, &mesh.bind_group, &[]);
+
                 render_pass.set_pipeline(&self.render_pipelines[mesh_idx]); // 2.
                 render_pass.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
                 if let Some(nbuff) = &mesh.normal_buffer {
                     render_pass.set_vertex_buffer(1, nbuff.slice(..));
                 }
-                if let Some(ibuff) = &mesh._index_buffer {
+                if let Some(ibuff) = &mesh.index_buffer {
                     render_pass.set_index_buffer(ibuff.slice(..), wgpu::IndexFormat::Uint32);
                     render_pass.draw_indexed(0..mesh.num_triangles * 3, 0, 0..1);
                 } else {
@@ -239,7 +270,10 @@ fn generate_pipelines(
 
     for mesh in &scene.meshes {
         // build render pipeline layout
-        let bind_group_layouts = [&WGPUCamera::bind_group_layout(device)];
+        let bind_group_layouts = [
+            &WGPUCamera::bind_group_layout(device),
+            &WGPUMesh::bind_group_layout(device),
+        ];
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
@@ -300,7 +334,7 @@ fn generate_pipelines(
             topology: wgpu::PrimitiveTopology::TriangleList,
             strip_index_format: None,
             front_face: wgpu::FrontFace::Ccw,
-            cull_mode: None,
+            cull_mode: Some(wgpu::Face::Back),
             polygon_mode: wgpu::PolygonMode::Fill,
             // Requires Features::DEPTH_CLIP_CONTROL
             unclipped_depth: false,
@@ -314,13 +348,21 @@ fn generate_pipelines(
             alpha_to_coverage_enabled: false,
         };
 
+        let depth_stencil = Some(wgpu::DepthStencilState {
+            format: texture::Texture::DEPTH_FORMAT,
+            depth_write_enabled: true,
+            depth_compare: wgpu::CompareFunction::Less,
+            stencil: wgpu::StencilState::default(),
+            bias: wgpu::DepthBiasState::default(),
+        });
+
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
             layout: Some(&render_pipeline_layout),
             vertex: vertex_state,
             fragment: Some(fragment_state),
             primitive: primitive_state,
-            depth_stencil: None,
+            depth_stencil,
             multisample: multisample_state,
             // If the pipeline will be used with a multiview render pass, this
             // indicates how many array layers the attachments will have.
@@ -333,4 +375,9 @@ fn generate_pipelines(
     }
 
     pipelines
+}
+
+fn generate_normal_transform(view_matrix: glam::Mat4, model_matrix: glam::Mat4) -> glam::Mat4 {
+    let model_view = view_matrix * model_matrix;
+    model_view.inverse().transpose()
 }

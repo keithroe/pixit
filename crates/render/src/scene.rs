@@ -35,7 +35,8 @@ impl Scene {
             };
 
             for primitive in &mesh.primitives {
-                let mut wgpu_mesh = WGPUMesh::from_model_primitive(primitive, device);
+                let mut wgpu_mesh =
+                    WGPUMesh::from_model_primitive(primitive, mesh.transform, device);
                 wgpu_mesh.skin_id = skin_id;
                 wgpu_mesh.material_id = None;
                 scene.meshes.push(wgpu_mesh);
@@ -48,7 +49,7 @@ impl Scene {
 /// Camera controller and WGPU state for device-side camera data
 pub struct WGPUCamera {
     pub controller: camera::Camera,
-    pub buffer: wgpu::Buffer,
+    pub view_proj_buffer: wgpu::Buffer,
     pub bind_group: wgpu::BindGroup,
 }
 
@@ -69,7 +70,7 @@ impl WGPUCamera {
         );
 
         // Buffer to store the camera matrix as uniform data
-        let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        let view_proj_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Camera Buffer"),
             size: std::mem::size_of::<glam::Mat4>() as u64,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
@@ -80,14 +81,14 @@ impl WGPUCamera {
             layout: &WGPUCamera::bind_group_layout(device),
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
-                resource: buffer.as_entire_binding(),
+                resource: view_proj_buffer.as_entire_binding(),
             }],
             label: Some("camera_bind_group"),
         });
 
         Self {
             controller,
-            buffer,
+            view_proj_buffer,
             bind_group,
         }
     }
@@ -146,18 +147,28 @@ impl WGPULight {
 }
 
 pub struct WGPUMesh {
+    pub transform: glam::Mat4,
     pub skin_id: Option<u32>,
     pub material_id: Option<u32>,
 
     pub num_triangles: u32,
     pub vertex_buffer: wgpu::Buffer,
-    pub _index_buffer: Option<wgpu::Buffer>,
+    pub index_buffer: Option<wgpu::Buffer>,
     pub normal_buffer: Option<wgpu::Buffer>,
+
+    //pub transform_buffer: wgpu::Buffer,
+    pub normal_transform_buffer: wgpu::Buffer,
+    pub bind_group: wgpu::BindGroup,
 }
 
 impl WGPUMesh {
-    pub fn from_model_primitive(prim: &model::Primitive, device: &wgpu::Device) -> Self {
+    pub fn from_model_primitive(
+        prim: &model::Primitive,
+        transform: glam::Mat4,
+        device: &wgpu::Device,
+    ) -> Self {
         let mut num_triangles = prim.positions.len() as u32;
+
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
             contents: bytemuck::cast_slice(prim.positions.as_slice()),
@@ -178,25 +189,86 @@ impl WGPUMesh {
 
         let normal_buffer = if !prim.normals.is_empty() {
             let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("NormalBuffer"),
+                label: Some("Normal Buffer"),
                 contents: bytemuck::cast_slice(prim.normals.as_slice()),
                 usage: wgpu::BufferUsages::VERTEX,
             });
-            println!("setting nbuff to SOME");
             Some(buffer)
         } else {
-            println!("setting nbuff to NONE");
             None
         };
 
+        // Buffer to store the model tranform
+        let transform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Model Transform Buffer"),
+            contents: bytemuck::cast_slice(&[transform]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        // Buffer to store the normal transform (inv-transpose of model-view)
+        let normal_transform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Normal Transform Buffer"),
+            size: std::mem::size_of::<glam::Mat4>() as u64,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &WGPUMesh::bind_group_layout(device),
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: transform_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: normal_transform_buffer.as_entire_binding(),
+                },
+            ],
+            label: Some("Camera BindGroup"),
+        });
+
         Self {
+            transform,
             skin_id: None,
             material_id: None,
             num_triangles,
             vertex_buffer,
-            _index_buffer: index_buffer,
+            index_buffer,
             normal_buffer,
+
+            //transform_buffer,
+            normal_transform_buffer,
+            bind_group,
         }
+    }
+
+    pub fn bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+            ],
+            label: Some("mesh_bind_group_layout"),
+        })
     }
 }
 
