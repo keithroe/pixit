@@ -22,7 +22,9 @@ path = "crates/app/src/main.rs"
 name = "pixit"
 
 [dependencies]
+clap = {version = "4.5.31", features = ["derive"]}
 egui = "0.31"
+egui_flex = "0.3.0"
 egui_extras = { version = "0.31.0", features = [
         "all_loaders",
 ] }
@@ -31,7 +33,6 @@ eframe = { version = "0.31.0", default-features = false, features = [
         "wgpu",          # Use the glow rendering backend. Alternative: "wgpu".
         "x11",           # To support Linux (and CI)
 ] }
-egui_flex = "0.3.0"
 env_logger = "0.11"
 event = { path = "crates/event" }
 model = { path = "crates/model" }
