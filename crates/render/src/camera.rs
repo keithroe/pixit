@@ -1,5 +1,3 @@
-// TODO: hide camera classes outside of crate
-
 /// Simple camera controller for interactive viewing.  Allows panning, rotating around look-at
 /// point, and dollying.  All input operations in normalized device coordinate space ([-1,1]^2
 /// over view-plane).  Uses acrball control.

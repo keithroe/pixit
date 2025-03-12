@@ -49,7 +49,6 @@ impl RenderViewport {
             .max_size(egui::Vec2::new(512.0, 512.0));
         let response = ui.add(image);
 
-        // TODO: dont expose camera, pass in the mouse events
         if response.dragged() {
             let egui_drag_begin = response.interact_pointer_pos().unwrap() - response.rect.min;
             let egui_drag_end = egui_drag_begin + response.drag_motion();

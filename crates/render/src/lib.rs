@@ -1,5 +1,3 @@
-// TODO: can we pull all egui out of renderer?
-
 mod camera;
 mod light;
 mod scene;
@@ -144,7 +142,6 @@ impl Renderer {
             modifiers: _,
         } = event
         {
-            // TODO: api for accessing camera view
             let drag_begin = self.raster_to_ndc(drag_begin);
             let drag_end = self.raster_to_ndc(drag_end);
             match button {
