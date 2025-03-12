@@ -3,6 +3,7 @@
 mod camera;
 mod light;
 mod scene;
+mod shader;
 mod texture;
 
 use scene::*;
@@ -17,8 +18,8 @@ pub struct Renderer {
     queue: wgpu::Queue,
     device: wgpu::Device,
     render_view: RenderView,
-    //shader_module: wgpu::ShaderModule,
     scene: Scene,
+    _shader_cache: shader::Cache,
 
     render_pipelines: Vec<wgpu::RenderPipeline>,
     depth_texture: texture::Texture,
@@ -33,39 +34,10 @@ impl Renderer {
     ) -> Self {
         let render_view = RenderView::new(size, &device);
 
-        let vert_shader_source = wgpu::ShaderSource::Glsl {
-            shader: include_str!("../shader/vert.glsl").into(),
-            stage: wgpu::naga::ShaderStage::Vertex,
-            defines: wgpu::naga::FastHashMap::default(),
-        };
-
-        let vert_shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("VertShader"),
-            //source: wgpu::ShaderSource::Wgsl(include_str!("../shader/render.wgsl").into()),
-            source: vert_shader_source,
-        });
-
-        let frag_shader_source = wgpu::ShaderSource::Glsl {
-            shader: include_str!("../shader/frag.glsl").into(),
-            stage: wgpu::naga::ShaderStage::Fragment,
-            defines: wgpu::naga::FastHashMap::default(),
-        };
-
-        let frag_shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("FragShader"),
-            //source: wgpu::ShaderSource::Wgsl(include_str!("../shader/render.wgsl").into()),
-            source: frag_shader_source,
-        });
-
         let scene = Scene::from_model(input_model, &device);
 
-        let render_pipelines = generate_pipelines(
-            &scene,
-            &vert_shader_module,
-            &frag_shader_module,
-            &render_view,
-            &device,
-        );
+        let mut shader_cache = shader::Cache::new(&device);
+        let render_pipelines = generate_pipelines(&scene, &mut shader_cache, &render_view, &device);
 
         let depth_texture = texture::Texture::new_depth_texture(size, &device);
 
@@ -73,7 +45,7 @@ impl Renderer {
             queue,
             device,
             render_view,
-            //shader_module,
+            _shader_cache: shader_cache,
             scene,
             render_pipelines,
             depth_texture,
@@ -261,8 +233,9 @@ impl RenderView {
 
 fn generate_pipelines(
     scene: &Scene,
-    vert_shader_module: &wgpu::ShaderModule,
-    frag_shader_module: &wgpu::ShaderModule,
+    shader_cache: &mut shader::Cache,
+    //vert_shader_module: &wgpu::ShaderModule,
+    //frag_shader_module: &wgpu::ShaderModule,
     render_view: &RenderView,
     device: &wgpu::Device,
 ) -> Vec<wgpu::RenderPipeline> {
@@ -282,6 +255,8 @@ fn generate_pipelines(
             });
 
         // build pipeline
+        let mut shader_spec = shader::Specification::default();
+
         let mut vertex_buffer_layouts = vec![wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<glam::Vec3>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
@@ -295,6 +270,7 @@ fn generate_pipelines(
 
         if mesh.normal_buffer.is_some() {
             println!("setting normal buffer");
+            shader_spec.has_normals = true;
             vertex_buffer_layouts.push(wgpu::VertexBufferLayout {
                 array_stride: std::mem::size_of::<glam::Vec3>() as wgpu::BufferAddress,
                 step_mode: wgpu::VertexStepMode::Vertex,
@@ -309,15 +285,17 @@ fn generate_pipelines(
             println!("NOT setting normal buffer");
         }
 
+        let (vert_module, frag_module) = shader_cache.get_modules(shader_spec);
+
         let vertex_state = wgpu::VertexState {
-            module: vert_shader_module,
+            module: vert_module,
             entry_point: Some("main"),
             buffers: &vertex_buffer_layouts,
             compilation_options: Default::default(),
         };
 
         let fragment_state = wgpu::FragmentState {
-            module: frag_shader_module,
+            module: frag_module,
             entry_point: Some("main"),
             targets: &[Some(wgpu::ColorTargetState {
                 format: render_view.desc.format,

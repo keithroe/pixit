@@ -2,8 +2,15 @@ use eframe::egui_wgpu;
 //use eframe::{wgpu::Device, wgpu::Queue};
 use egui_flex::Flex;
 
-// TODO:
-//     * decide on app-restore or not
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+pub struct Args {
+    /// Path to gltf/glb file to be rendered
+    #[arg(short, long, default_value = "assets/Avocado.glb")]
+    gltf: String,
+}
 
 struct RenderViewport {
     renderer: render::Renderer,
@@ -81,9 +88,9 @@ impl App {
     const VIEWPORT_HEIGHT: u32 = 512;
 
     /// Called once before the first frame.
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+    pub fn new(args: Args, cc: &eframe::CreationContext<'_>) -> Self {
         //let model = model::Model::from_gltf("assets/Fox.glb");
-        let model = model::Model::from_gltf("assets/Avocado.glb");
+        let model = model::Model::from_gltf(&args.gltf);
 
         App {
             num_frames: 60, // TODO: connect this value

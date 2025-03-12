@@ -2,18 +2,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 use clap::Parser;
+
 mod app;
 
-#[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
-struct Args {
-    /// Path to gltf/glb file to be rendered
-    #[arg(short, long)]
-    gltf: String,
-}
-
 fn main() -> eframe::Result {
-    //let args = Args::parse();
+    let args = app::Args::parse();
 
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
 
@@ -37,7 +30,7 @@ fn main() -> eframe::Result {
         native_options,
         Box::new(|cc| {
             egui_extras::install_image_loaders(&cc.egui_ctx);
-            Ok(Box::new(app::App::new(cc)))
+            Ok(Box::new(app::App::new(args, cc)))
         }),
     )
 }
