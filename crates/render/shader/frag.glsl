@@ -1,37 +1,31 @@
 
 #version 450
 
-layout(location = 0) in vec3 P;
+// inputs
+layout(location = 0) in vec3 world_pos;
+layout(location = 1) in vec3 object_pos;
 #ifdef HAS_NORMALS
-layout(location = 1) in vec3 N;
+layout(location = 2) in vec3 object_normal;
 #endif
+
+// outputs
 out vec4 color;
+
+// uniforms
+layout (set = 1, binding = 1)
+uniform mat4 normal_transform;
 
 void main()
 {
-#ifdef HAS_NORMALS
-    vec3 norm = N;
-#else
-    vec3 dx = dFdx(P);
-    vec3 dy = dFdy(P);
-    vec3 norm = normalize(cross(dx, dy));
+
+#ifndef HAS_NORMALS
+    vec3 dx = dFdx(object_pos);
+    vec3 dy = dFdy(object_pos);
+    vec3 object_normal = normalize(cross(dx, dy));
 #endif
+    vec3 world_normal = normalize(normal_transform*vec4(object_normal, 1.0)).xyz;
+
     //color = vec4(0.6f, 0.5f, 0.2f, 1.0f);
-    color = vec4((norm+vec3(1.0))*0.5, 1.0f);
+    color = vec4((object_normal+vec3(1.0))*0.5, 1.0f);
     //color = vec4(N_scaled, 1.0f);
 }
-/*
-struct VertexOutput {
-    @builtin(position) clip_position: vec4<f32>,
-    //@location(0) color: vec3<f32>,
-};
-
-
-@fragment
-fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    //return vec4<f32>(in.color, 1.0);
-    return vec4<f32>(0.3, 0.2, 0.1, 1.0);
-}
-*/
-
-
