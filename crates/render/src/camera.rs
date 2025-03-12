@@ -1,17 +1,22 @@
 // TODO: hide camera classes outside of crate
 
-/// * operates in NDC
-/// * arcball for view
-pub struct CameraView {
+/// Simple camera controller for interactive viewing.  Allows panning, rotating around look-at
+/// point, and dollying.  All input operations in normalized device coordinate space ([-1,1]^2
+/// over view-plane).  Uses acrball control.
+struct CameraView {
     pan_translation: glam::Vec3,
     dolly_translation: glam::Vec3,
     rotation: glam::Quat,
-    //camera: glam::Mat4,
-    //inv_camera: glam::Mat4,
+}
+
+impl Default for CameraView {
+    fn default() -> Self {
+        CameraView::new(glam::Vec3::Z, glam::Vec3::ZERO, glam::Vec3::Y)
+    }
 }
 
 impl CameraView {
-    pub fn new(eye: glam::Vec3, look_at: glam::Vec3, up: glam::Vec3) -> Self {
+    fn new(eye: glam::Vec3, look_at: glam::Vec3, up: glam::Vec3) -> Self {
         let look_dir = look_at - eye;
         let z_axis = look_dir.normalize();
         let x_axis = z_axis.cross(up.normalize()).normalize();
@@ -35,7 +40,7 @@ impl CameraView {
         }
     }
 
-    pub fn rotate(&mut self, pos0: glam::Vec2, pos1: glam::Vec2) {
+    fn rotate(&mut self, pos0: glam::Vec2, pos1: glam::Vec2) {
         // Clamp to NDC
         let pos0 = pos0.clamp(glam::Vec2::new(-1.0, -1.0), glam::Vec2::new(1.0, 1.0));
         let pos1 = pos1.clamp(glam::Vec2::new(-1.0, -1.0), glam::Vec2::new(1.0, 1.0));
@@ -46,11 +51,11 @@ impl CameraView {
         self.rotation = arcball1 * arcball0 * self.rotation;
     }
 
-    pub fn dolly(&mut self, amount: f32) {
+    fn dolly(&mut self, amount: f32) {
         self.dolly_translation += glam::Vec3::new(0.0, 0.0, amount);
     }
 
-    pub fn pan(&mut self, amount: glam::Vec2) {
+    fn pan(&mut self, amount: glam::Vec2) {
         let dolly_scale = self.dolly_translation.z;
         let pan = glam::Vec3::new(amount.x * dolly_scale, amount.y * dolly_scale, 0.0);
 
@@ -62,7 +67,7 @@ impl CameraView {
         self.pan_translation = pan + self.pan_translation;
     }
 
-    pub fn matrix(&self) -> glam::Mat4 {
+    fn matrix(&self) -> glam::Mat4 {
         glam::Mat4::from_translation(self.dolly_translation)
             * glam::Mat4::from_quat(self.rotation)
             * glam::Mat4::from_translation(self.pan_translation)
@@ -82,11 +87,23 @@ fn pos_to_arcball(pos: glam::Vec2) -> glam::Quat {
     }
 }
 
-pub struct CameraProjection {
-    pub aspect: f32,
-    pub fovy: f32,
-    pub znear: f32,
-    pub zfar: f32,
+/// Camera projection controller.  Allows initial setup of projection transform.  No interactivity.
+struct CameraProjection {
+    aspect: f32,
+    fovy: f32,
+    znear: f32,
+    zfar: f32,
+}
+
+impl Default for CameraProjection {
+    fn default() -> Self {
+        CameraProjection {
+            aspect: 1.0,
+            fovy: std::f32::consts::PI / 4.0,
+            znear: 0.0001,
+            zfar: 100.0,
+        }
+    }
 }
 
 impl CameraProjection {
@@ -95,32 +112,42 @@ impl CameraProjection {
     }
 }
 
-// TODO: API here
+#[derive(Default)]
 pub struct Camera {
-    pub camera_view: CameraView,
-    pub camera_projection: CameraProjection,
+    camera_view: CameraView,
+    camera_projection: CameraProjection,
 }
 
 impl Camera {
-    // TODO: builder
-    pub fn new(
-        eye: glam::Vec3,
-        look_at: glam::Vec3,
-        up: glam::Vec3,
-        aspect: f32,
-        fovy: f32,
-        znear: f32,
-        zfar: f32,
-    ) -> Self {
-        Self {
-            camera_view: CameraView::new(eye, look_at, up),
-            camera_projection: CameraProjection {
-                aspect,
-                fovy,
-                znear,
-                zfar,
-            },
-        }
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_view(mut self, eye: glam::Vec3, look_at: glam::Vec3, up: glam::Vec3) -> Camera {
+        self.camera_view = CameraView::new(eye, look_at, up);
+        self
+    }
+
+    pub fn with_projection(mut self, aspect: f32, fovy: f32, znear: f32, zfar: f32) -> Camera {
+        self.camera_projection = CameraProjection {
+            aspect,
+            fovy,
+            znear,
+            zfar,
+        };
+        self
+    }
+
+    pub fn rotate(&mut self, pos0: glam::Vec2, pos1: glam::Vec2) {
+        self.camera_view.rotate(pos0, pos1);
+    }
+
+    pub fn dolly(&mut self, amount: f32) {
+        self.camera_view.dolly(amount);
+    }
+
+    pub fn pan(&mut self, amount: glam::Vec2) {
+        self.camera_view.pan(amount);
     }
 
     pub fn view_matrix(&self) -> glam::Mat4 {

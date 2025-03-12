@@ -149,24 +149,15 @@ impl Renderer {
             let drag_end = self.raster_to_ndc(drag_end);
             match button {
                 event::MouseButton::Primary => {
-                    self.scene
-                        .camera
-                        .controller
-                        .camera_view
-                        .rotate(drag_begin, drag_end);
+                    self.scene.camera.controller.rotate(drag_begin, drag_end);
                 }
                 event::MouseButton::Secondary => {
-                    self.scene
-                        .camera
-                        .controller
-                        .camera_view
-                        .pan(drag_begin - drag_end);
+                    self.scene.camera.controller.pan(drag_begin - drag_end);
                 }
                 event::MouseButton::Middle => {
                     self.scene
                         .camera
                         .controller
-                        .camera_view
                         .dolly((drag_begin.y - drag_end.y) * self.scene.bbox.longest_axis());
                 }
                 _ => {}

@@ -59,15 +59,18 @@ impl WGPUCamera {
         // center of model's bounding box
         let bbox_mid = bbox.mid();
         let scale = bbox.longest_axis();
-        let controller = camera::Camera::new(
-            bbox_mid + glam::Vec3::Z * scale * 1.5,
-            bbox_mid,
-            glam::Vec3::Y,
-            1.0,
-            std::f32::consts::PI / 4.0,
-            0.001,
-            scale * 4.0,
-        );
+        let controller = camera::Camera::new()
+            .with_view(
+                bbox_mid + glam::Vec3::Z * scale * 1.5, // eye
+                bbox_mid,                               // lookat
+                glam::Vec3::Y,                          // up
+            )
+            .with_projection(
+                1.0,                        // aspect
+                std::f32::consts::PI / 4.0, // yfov
+                0.001,                      // znear
+                scale * 4.0,                // zfar
+            );
 
         // Buffer to store the camera matrix as uniform data
         let view_proj_buffer = device.create_buffer(&wgpu::BufferDescriptor {
