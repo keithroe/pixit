@@ -9,7 +9,7 @@ use crate::light;
 pub struct Scene {
     pub bbox: model::BoundingBox,
     pub camera: WGPUCamera,
-    pub _light: WGPULight,
+    pub light: WGPULight,
     pub _materials: Vec<WGPUMaterial>,
     pub skins: Vec<WGPUSkin>,
     pub meshes: Vec<WGPUMesh>,
@@ -20,7 +20,7 @@ impl Scene {
         let mut scene = Self {
             bbox: model.bbox,
             camera: WGPUCamera::with_looking_at(&model.bbox, device),
-            _light: WGPULight::new(device),
+            light: WGPULight::new(device),
             _materials: Vec::new(),
             skins: Vec::new(),
             meshes: Vec::new(),
@@ -86,7 +86,7 @@ impl WGPUCamera {
                 binding: 0,
                 resource: view_proj_buffer.as_entire_binding(),
             }],
-            label: Some("camera_bind_group"),
+            label: Some("Camera BindGroup"),
         });
 
         Self {
@@ -108,23 +108,23 @@ impl WGPUCamera {
                 },
                 count: None,
             }],
-            label: Some("camera_bind_group_layout"),
+            label: Some("Camera BindGroupLayout"),
         })
     }
 }
 
 /// Light controller and its WGPU state for device-side light data
 pub struct WGPULight {
-    pub _controller: light::Light,
-    pub _buffer: wgpu::Buffer,
-    pub _bind_group: wgpu::BindGroup,
+    pub controller: light::Light,
+    pub buffer: wgpu::Buffer,
+    pub bind_group: wgpu::BindGroup,
 }
 
 impl WGPULight {
     pub fn new(device: &wgpu::Device) -> Self {
         let controller = light::Light::default();
 
-        // Buffer to store the camera matrix as uniform data
+        // Buffer to store light params as uniform data
         let buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Light Buffer"),
             size: std::mem::size_of::<light::UniformData>() as u64,
@@ -132,20 +132,49 @@ impl WGPULight {
             mapped_at_creation: false,
         });
 
+        println!(
+            "Host size of light uniformdata: {}",
+            std::mem::size_of::<light::UniformData>()
+        );
+
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &WGPUCamera::bind_group_layout(device),
+            layout: &WGPULight::bind_group_layout(device),
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
                 resource: buffer.as_entire_binding(),
             }],
-            label: Some("camera_bind_group"),
+            label: Some("Light BindGroup"),
         });
 
         Self {
-            _controller: controller,
-            _buffer: buffer,
-            _bind_group: bind_group,
+            controller,
+            buffer,
+            bind_group,
         }
+    }
+
+    pub fn update_uniform(&self, queue: &wgpu::Queue) {
+        queue.write_buffer(
+            &self.buffer,
+            0,
+            bytemuck::cast_slice(&[self.controller.uniform_data]),
+        );
+    }
+
+    pub fn bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+            label: Some("Light BindGroupLayout"),
+        })
     }
 }
 

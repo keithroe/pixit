@@ -55,6 +55,7 @@ impl Renderer {
     }
 
     pub fn render(&self) {
+        // Update camera uniforms
         let view_matrix = self.scene.camera.controller.view_matrix();
         let proj_matrix = self.scene.camera.controller.projection_matrix();
         let view_proj = proj_matrix * view_matrix;
@@ -63,6 +64,8 @@ impl Renderer {
             0,
             bytemuck::cast_slice(&[view_proj]),
         );
+
+        self.scene.light.update_uniform(&self.queue);
 
         for (mesh_idx, mesh) in self.scene.meshes.iter().enumerate() {
             let mut encoder = self
@@ -116,6 +119,7 @@ impl Renderer {
                 });
                 render_pass.set_bind_group(0, &self.scene.camera.bind_group, &[]);
                 render_pass.set_bind_group(1, &mesh.bind_group, &[]);
+                render_pass.set_bind_group(2, &self.scene.light.bind_group, &[]);
 
                 render_pass.set_pipeline(&self.render_pipelines[mesh_idx]); // 2.
                 render_pass.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
@@ -222,8 +226,6 @@ impl RenderView {
 fn generate_pipelines(
     scene: &Scene,
     shader_cache: &mut shader::Cache,
-    //vert_shader_module: &wgpu::ShaderModule,
-    //frag_shader_module: &wgpu::ShaderModule,
     render_view: &RenderView,
     device: &wgpu::Device,
 ) -> Vec<wgpu::RenderPipeline> {
@@ -234,6 +236,7 @@ fn generate_pipelines(
         let bind_group_layouts = [
             &WGPUCamera::bind_group_layout(device),
             &WGPUMesh::bind_group_layout(device),
+            &WGPULight::bind_group_layout(device),
         ];
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -345,5 +348,8 @@ fn generate_pipelines(
 
 fn generate_normal_transform(view_matrix: glam::Mat4, model_matrix: glam::Mat4) -> glam::Mat4 {
     let model_view = view_matrix * model_matrix;
-    model_view.inverse().transpose()
+    println!("modelview: {}", model_view);
+    let normal_xform = model_view.transpose().inverse().transpose();
+    println!("normal: {}", normal_xform);
+    normal_xform
 }
