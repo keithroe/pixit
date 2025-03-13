@@ -111,7 +111,7 @@ impl App {
 
 impl eframe::App for App {
     fn clear_color(&self, _visuals: &egui::style::Visuals) -> [f32; 4] {
-        [0.1, 0.1, 0.2, 0.5]
+        [0.05, 0.05, 0.05, 1.0]
     }
     /// Called each time the UI needs repainting, which may be many times per second.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
