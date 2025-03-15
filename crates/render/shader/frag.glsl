@@ -36,13 +36,12 @@ void main()
 #ifndef HAS_NORMALS
     vec3 dx = dFdx(object_pos);
     vec3 dy = dFdy(object_pos);
-    vec3 object_normal = normalize(cross(dx, dy));
+    vec3 object_normal = normalize(cross(dy, dx));
 #endif
     vec3 world_normal = normalize(normal_transform*vec4(object_normal, 0.0)).xyz;
 
     vec3 w_in = -normalize(light.dir);
     float n_dot_w = max(0.0, dot(world_normal, w_in));
-    //float n_dot_w = max(0.0, dot(object_normal, w_in));
     vec3 l = n_dot_w * light.color * light.scale + light.ambient*light.ambient_scale;
     vec3 b = vec3(1.0); 
     color = vec4(b*l, 1.0);

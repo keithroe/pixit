@@ -261,7 +261,7 @@ fn generate_pipelines(
 
         if mesh.normal_buffer.is_some() {
             println!("setting normal buffer");
-            shader_spec.has_normals = true;
+            //       shader_spec.has_normals = true;
             vertex_buffer_layouts.push(wgpu::VertexBufferLayout {
                 array_stride: std::mem::size_of::<glam::Vec3>() as wgpu::BufferAddress,
                 step_mode: wgpu::VertexStepMode::Vertex,
@@ -348,8 +348,5 @@ fn generate_pipelines(
 
 fn generate_normal_transform(view_matrix: glam::Mat4, model_matrix: glam::Mat4) -> glam::Mat4 {
     let model_view = view_matrix * model_matrix;
-    println!("modelview: {}", model_view);
-    let normal_xform = model_view.transpose().inverse().transpose();
-    println!("normal: {}", normal_xform);
-    normal_xform
+    model_view.transpose().inverse().transpose()
 }
