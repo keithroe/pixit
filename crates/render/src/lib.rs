@@ -348,5 +348,5 @@ fn generate_pipelines(
 
 fn generate_normal_transform(view_matrix: glam::Mat4, model_matrix: glam::Mat4) -> glam::Mat4 {
     let model_view = view_matrix * model_matrix;
-    model_view.transpose().inverse().transpose()
+    model_view.inverse().transpose()
 }

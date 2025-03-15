@@ -38,7 +38,7 @@ void main()
     vec3 dy = dFdy(object_pos);
     vec3 object_normal = normalize(cross(dy, dx));
 #endif
-    vec3 world_normal = normalize(normal_transform*vec4(object_normal, 0.0)).xyz;
+    vec3 world_normal = normalize(mat3(normal_transform)*object_normal);
 
     vec3 w_in = -normalize(light.dir);
     float n_dot_w = max(0.0, dot(world_normal, w_in));
