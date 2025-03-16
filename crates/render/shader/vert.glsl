@@ -6,6 +6,9 @@ layout (location = 0) in vec3 pos;
 #ifdef HAS_NORMALS
 layout (location = 1) in vec3 normal;
 #endif // HAS_NORMALS
+#ifdef HAS_TEXCOORDS
+layout (location = 2) in vec2 texcoord;
+#endif // HAS_NORMALS
 
 // outputs
 layout (location = 0) out vec3 world_pos;
@@ -13,6 +16,7 @@ layout (location = 1) out vec3 object_pos;
 #ifdef HAS_NORMALS
 layout (location = 2) out vec3 object_normal;
 #endif // HAS_NORMALS
+layout (location = 3) out vec2 uv;
 
 // uniforms
 layout (set = 0, binding = 0)
@@ -30,4 +34,11 @@ void main() {
 #ifdef HAS_NORMALS
     object_normal = normal;
 #endif // HAS_NORMALS
+
+#ifdef HAS_TEXCOORDS
+    uv = texcoord;
+#else
+    uv = vec2(0.0, 0,0);
+#endif // HAS_TEXCOORDS
+    
 }

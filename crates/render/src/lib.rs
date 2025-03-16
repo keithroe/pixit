@@ -126,6 +126,9 @@ impl Renderer {
                 if let Some(nbuff) = &mesh.normal_buffer {
                     render_pass.set_vertex_buffer(1, nbuff.slice(..));
                 }
+                if let Some(tcbuff) = &mesh.texcoord_buffer {
+                    render_pass.set_vertex_buffer(2, tcbuff.slice(..));
+                }
                 if let Some(ibuff) = &mesh.index_buffer {
                     render_pass.set_index_buffer(ibuff.slice(..), wgpu::IndexFormat::Uint32);
                     render_pass.draw_indexed(0..mesh.num_triangles * 3, 0, 0..1);
@@ -259,9 +262,10 @@ fn generate_pipelines(
             }],
         }];
 
+        // TODO:: create abstraction for VertexAttribute
         if mesh.normal_buffer.is_some() {
             println!("setting normal buffer");
-            //       shader_spec.has_normals = true;
+            shader_spec.has_normals = true;
             vertex_buffer_layouts.push(wgpu::VertexBufferLayout {
                 array_stride: std::mem::size_of::<glam::Vec3>() as wgpu::BufferAddress,
                 step_mode: wgpu::VertexStepMode::Vertex,
@@ -272,8 +276,21 @@ fn generate_pipelines(
                     format: wgpu::VertexFormat::Float32x3,
                 }],
             });
-        } else {
-            println!("NOT setting normal buffer");
+        }
+
+        if mesh.texcoord_buffer.is_some() {
+            println!("setting texcoord buffer");
+            shader_spec.has_texcoords = true;
+            vertex_buffer_layouts.push(wgpu::VertexBufferLayout {
+                array_stride: std::mem::size_of::<glam::Vec2>() as wgpu::BufferAddress,
+                step_mode: wgpu::VertexStepMode::Vertex,
+                attributes: &[wgpu::VertexAttribute {
+                    // Normals
+                    offset: 0,
+                    shader_location: 1,
+                    format: wgpu::VertexFormat::Float32x2,
+                }],
+            });
         }
 
         let (vert_module, frag_module) = shader_cache.get_modules(shader_spec);

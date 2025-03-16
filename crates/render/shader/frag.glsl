@@ -19,6 +19,7 @@ layout(location = 1) in vec3 object_pos;
 #ifdef HAS_NORMALS
 layout(location = 2) in vec3 object_normal;
 #endif
+layout(location = 3) in vec2 uv;
 
 // outputs
 out vec4 color;

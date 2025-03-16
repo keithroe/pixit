@@ -187,6 +187,7 @@ pub struct WGPUMesh {
     pub vertex_buffer: wgpu::Buffer,
     pub index_buffer: Option<wgpu::Buffer>,
     pub normal_buffer: Option<wgpu::Buffer>,
+    pub texcoord_buffer: Option<wgpu::Buffer>,
 
     //pub transform_buffer: wgpu::Buffer,
     pub normal_transform_buffer: wgpu::Buffer,
@@ -223,6 +224,18 @@ impl WGPUMesh {
             let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Normal Buffer"),
                 contents: bytemuck::cast_slice(prim.normals.as_slice()),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
+            Some(buffer)
+        } else {
+            None
+        };
+
+        // TODO: right now only handling first texcoord set
+        let texcoord_buffer = if !prim.texcoords.is_empty() && !prim.texcoords[0].is_empty() {
+            let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Texcoord Buffer"),
+                contents: bytemuck::cast_slice(prim.texcoords[0].as_slice()),
                 usage: wgpu::BufferUsages::VERTEX,
             });
             Some(buffer)
@@ -268,6 +281,7 @@ impl WGPUMesh {
             vertex_buffer,
             index_buffer,
             normal_buffer,
+            texcoord_buffer,
 
             //transform_buffer,
             normal_transform_buffer,
