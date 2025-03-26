@@ -55,6 +55,8 @@ pub struct Model {
     pub bbox: BoundingBox,
     pub skins: Vec<Mesh>,
     pub meshes: Vec<Mesh>,
+    pub materials: Vec<Material>,
+    pub textures: Vec<Texture>,
 }
 
 impl Model {
@@ -69,6 +71,17 @@ impl Model {
             model.process_node(&root_node, &buffers, &images, glam::Mat4::IDENTITY);
         }
 
+        for material_node in document.materials() {
+            model
+                .materials
+                .push(Material::from_gltf(&material_node, document.textures()));
+        }
+
+        for texture_node in document.textures() {
+            model
+                .textures
+                .push(Texture::from_gltf(&texture_node, &images));
+        }
         for mesh in &model.meshes {
             model.bbox.expand_by_bbox(&mesh.bbox);
         }
@@ -91,7 +104,7 @@ impl Model {
             println!("\txform: {:?}", node_transform);
             println!("\tprim count: {}", mesh_node.primitives().len());
             self.meshes
-                .push(Mesh::new(&mesh_node, node.skin(), buffers, transform));
+                .push(Mesh::from_gltf(&mesh_node, node.skin(), buffers, transform));
         }
 
         for child in node.children() {
@@ -131,7 +144,7 @@ pub struct Mesh {
 }
 
 impl Mesh {
-    fn new(
+    fn from_gltf(
         mesh_node: &gltf::Mesh,
         skin_node: Option<gltf::Skin>,
         buffers: &[gltf::buffer::Data],
@@ -237,6 +250,9 @@ impl Mesh {
 /// with a single `Material`.
 #[derive(Default)]
 pub struct Primitive {
+    /// Index in model's list of Materials -- zero being default material
+    pub material_idx: u32,
+
     /// List of vertex index triples.
     ///
     /// Each represents a triangle's attribute index for each of its three vertices.  If
@@ -282,4 +298,73 @@ pub struct Primitive {
     ///
     /// List of vertex colors.  All colors upconverted to f32 RGBA (eg, from U8)
     pub colors: Vec<glam::Vec4>,
+}
+
+pub mod texture {
+    #[derive(Default)]
+    pub enum WrappingMode {
+        #[default]
+        ClampToEdge = 1,
+        MirroredRepeat = 2,
+        Repeat = 3,
+    }
+    #[derive(Default)]
+    pub enum MinFilter {
+        Nearest = 1,
+        #[default]
+        Linear = 2,
+        NearestMipmapNearest = 3,
+        LinearMipmapNearest = 4,
+        NearestMipmapLinear = 5,
+        LinearMipmapLinear = 6,
+    }
+    #[derive(Default)]
+    pub enum MagFilter {
+        Nearest = 1,
+        #[default]
+        Linear = 2,
+    }
+
+    #[derive(Default)]
+    pub struct Sampler {
+        pub min_filter: Option<MinFilter>,
+        pub max_filter: Option<MagFilter>,
+        pub wrap_s: WrappingMode,
+        pub wrap_t: WrappingMode,
+    }
+}
+
+pub struct Texture {
+    sampler: texture::Sampler,
+}
+
+impl Texture {
+    fn from_gltf(texture: &gltf::Texture, images: &Vec<gltf::image::Data>) -> Self {
+        Self {
+            sampler: texture::Sampler::default(),
+        }
+    }
+}
+
+pub struct Material {
+    base_color: Vec3,
+    base_color_tex: Option<usize>,
+}
+
+impl Material {
+    fn from_gltf(material: &gltf::Material, mut textures: gltf::iter::Textures) -> Self {
+        let pbr = &material.pbr_metallic_roughness();
+        let base_color = Vec3::from_slice(&pbr.base_color_factor());
+        let mut base_color_tex = None;
+        if let Some(tex_info) = &pbr.base_color_texture() {
+            let tex_idx = textures.position(|tex| tex.index() == tex_info.texture().index());
+            base_color_tex = tex_idx;
+            println!("Base color tex: {:?}", base_color_tex);
+        }
+
+        Self {
+            base_color,
+            base_color_tex,
+        }
+    }
 }
